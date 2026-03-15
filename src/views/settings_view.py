@@ -24,7 +24,7 @@ class SettingsView(ft.Column):
 
         header = ft.Container(
             content=ft.Row([
-                ft.TextButton(content=ft.Text("חזור", color="white", weight="bold"), on_click=lambda _: self.change_screen("schedule")),
+                ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color="white"), ft.Text("חזור", color="white", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
                 ft.Text("הגדרות סמסטר", size=20, weight="bold", color="white"),
                 ft.Container(width=40)
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
@@ -38,19 +38,19 @@ class SettingsView(ft.Column):
                 content=ft.Column([
                     ft.Text("תאריכי הסמסטר:", size=16),
                     ft.Row([
-                        ft.ElevatedButton(content=ft.Row([ft.Text("📅"), ft.Text("בחר תחילת סמסטר")]), on_click=lambda _: self.open_picker(self.start_picker)),
+                        ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/calendar_month.svg", width=20, height=20, color="white"), ft.Text("בחר תחילת סמסטר")]), on_click=lambda _: self.open_picker(self.start_picker)),
                         self.start_text
                     ]),
                     ft.Container(height=10),
                     ft.Row([
-                        ft.ElevatedButton(content=ft.Row([ft.Text("📅"), ft.Text("בחר סיום סמסטר")]), on_click=lambda _: self.open_picker(self.end_picker)),
+                        ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/calendar_month.svg", width=20, height=20, color="white"), ft.Text("בחר סיום סמסטר")]), on_click=lambda _: self.open_picker(self.end_picker)),
                         self.end_text
                     ]),
                     ft.Divider(),
                     ft.Text("הגדרות תצוגה:", size=16),
                     self.weekend_switch,
                     ft.Container(height=10),
-                    ft.ElevatedButton("שמור שינויים", on_click=self.save_settings, bgcolor="#43A047", color="white")
+                    ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/save.svg", width=20, height=20, color="white"), ft.Text("שמור שינויים")]), on_click=self.save_settings, bgcolor="#43A047", color="white")
                 ], spacing=15)
             )
         ]
@@ -70,7 +70,7 @@ class SettingsView(ft.Column):
             self.update()
 
     def save_settings(self, e):
-        if self.start_text.value == "לא נבחר" or self.end_text.value == "לא נבחר":
+        if self.start_text.value == "לא הוגדר" or self.end_text.value == "לא הוגדר":
             self.app_page.snack_bar = ft.SnackBar(ft.Text("חובה לבחור תאריכים!"))
             self.app_page.snack_bar.open = True
             self.app_page.update()

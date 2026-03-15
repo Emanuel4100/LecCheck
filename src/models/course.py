@@ -10,20 +10,22 @@ COURSE_COLORS = [
 ]
 
 class Course:
-    def __init__(self, course_id, title, lecturer):
+    def __init__(self, course_id, title, lecturer, course_code=""):
         self.course_id = course_id
         self.title = title
         self.lecturer = lecturer
+        self.course_code = course_code
         self.color = random.choice(COURSE_COLORS)
         self.meetings = []
         self.lectures = []
 
-    def add_weekly_meeting(self, semester_start, semester_end, day_name, start_time, end_time, room):
+    def add_weekly_meeting(self, semester_start, semester_end, day_name, start_time, end_time, location, meeting_type="הרצאה"):
         meeting_rule = {
             "day_name": day_name,
             "start_time": start_time,
             "end_time": end_time,
-            "room": room
+            "location": location,
+            "meeting_type": meeting_type
         }
         self.meetings.append(meeting_rule)
         self._generate_lectures_for_rule(semester_start, semester_end, meeting_rule)
@@ -46,14 +48,17 @@ class Course:
                         status = preserved_statuses[key]
 
                 new_id = str(time.time()) + str(current_date) + rule["start_time"]
+                
+                session_title = f"{self.title} - {rule.get('meeting_type', 'הרצאה')}"
+                
                 new_lec = LectureSession(
                     session_id=new_id,
-                    title=self.title,
+                    title=session_title,
                     lecturer=self.lecturer,
                     date_obj=current_date,
                     start_time=rule["start_time"],
                     end_time=rule["end_time"],
-                    room=rule["room"],
+                    room=rule["location"],
                     status=status
                 )
                 new_lec.course_color = self.color
@@ -75,6 +80,7 @@ class Course:
             "course_id": self.course_id,
             "title": self.title,
             "lecturer": self.lecturer,
+            "course_code": self.course_code,
             "color": self.color,
             "meetings": self.meetings,
             "lectures": [l.to_dict() for l in self.lectures]
@@ -85,7 +91,8 @@ class Course:
         course = cls(
             course_id=data["course_id"],
             title=data["title"],
-            lecturer=data["lecturer"]
+            lecturer=data["lecturer"],
+            course_code=data.get("course_code", "")
         )
         course.color = data.get("color", random.choice(COURSE_COLORS))
         course.meetings = data.get("meetings", [])

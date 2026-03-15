@@ -22,25 +22,22 @@ class ScheduleView(ft.Column):
 
         header = ft.Container(
             content=ft.Row([
-                ft.IconButton(
-                    icon="settings", 
-                    icon_color="white", 
+                # התיקון: כפתור ההגדרות עטוף ב-Container במקום IconButton
+                ft.Container(
+                    content=ft.Image(src="icons/settings.svg", width=24, height=24, color="white"),
                     tooltip="הגדרות",
+                    padding=10,
                     on_click=lambda _: self.change_screen("settings")
                 ),
                 ft.Text("מעקב הרצאות", size=22, weight="bold", color="white"),
                 ft.Container(width=48)
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            bgcolor="#1976D2", 
-            padding=15, 
-            border_radius=ft.border_radius.only(bottom_left=15, bottom_right=15), 
-            shadow=ft.BoxShadow(blur_radius=10, color="black26")
+            bgcolor="#1976D2", padding=15, border_radius=ft.border_radius.only(bottom_left=15, bottom_right=15), shadow=ft.BoxShadow(blur_radius=10, color="black26")
         )
 
         add_btn = ft.FloatingActionButton(
-            icon="add", 
-            bgcolor="#F57C00",
-            shape=ft.RoundedRectangleBorder(radius=16),
+            content=ft.Image(src="icons/add.svg", width=24, height=24, color="white"),
+            bgcolor="#F57C00", shape=ft.RoundedRectangleBorder(radius=16),
             on_click=lambda _: self.change_screen("add")
         )
 
@@ -52,10 +49,7 @@ class ScheduleView(ft.Column):
             is_selected = (tab == self.selected_tab)
             btn = ft.TextButton(
                 content=ft.Text(tab, color="#1976D2" if is_selected else "grey600", weight="bold" if is_selected else "normal"),
-                style=ft.ButtonStyle(
-                    bgcolor="#E3F2FD" if is_selected else "transparent", 
-                    shape=ft.RoundedRectangleBorder(radius=20)
-                ),
+                style=ft.ButtonStyle(bgcolor="#E3F2FD" if is_selected else "transparent", shape=ft.RoundedRectangleBorder(radius=20)),
                 on_click=self.create_tab_click_handler(tab)
             )
             self.tabs_row.controls.append(btn)
@@ -89,15 +83,13 @@ class ScheduleView(ft.Column):
         
         day_names = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"]
         days_to_show = 7 if self.schedule.show_weekend else 5
-        
         idx = (target_date.weekday() + 1) % 7
         sun = target_date - timedelta(days=idx)
 
-        # אייקונים מוחלטים שתמיד קיימים, ללא יישורים בעייתיים
         nav_row = ft.Row([
-            ft.TextButton("קודם", icon="arrow_forward", on_click=lambda _: self.change_week(-1)),
+            ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color="#1976D2"), ft.Text("קודם", color="#1976D2")]), on_click=lambda _: self.change_week(-1)),
             ft.Text(f"שבוע מתאריך: {sun.strftime('%d/%m/%Y')}", weight="bold", size=15, color="#1976D2"),
-            ft.TextButton("הבא", icon="arrow_back", on_click=lambda _: self.change_week(1)),
+            ft.TextButton(content=ft.Row([ft.Text("הבא", color="#1976D2"), ft.Image(src="icons/arrow_back.svg", width=18, height=18, color="#1976D2")]), on_click=lambda _: self.change_week(1)),
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
         SCALE = 1.2
@@ -108,13 +100,7 @@ class ScheduleView(ft.Column):
         time_column = ft.Column(spacing=0)
         time_column.controls.append(ft.Container(height=65)) 
         for h in range(START_HOUR, END_HOUR + 1):
-            time_column.controls.append(
-                ft.Container(
-                    content=ft.Text(f"{h:02d}:00", color="grey", size=12, weight="w500"),
-                    height=60 * SCALE,
-                    alignment=ft.Alignment(0, -1)
-                )
-            )
+            time_column.controls.append(ft.Container(content=ft.Text(f"{h:02d}:00", color="grey", size=12, weight="w500"), height=60 * SCALE, alignment=ft.Alignment(0, -1)))
 
         day_columns = []
         for i in range(days_to_show):
@@ -124,7 +110,7 @@ class ScheduleView(ft.Column):
             if self.schedule.semester_end and current_day_date == self.schedule.semester_end:
                 header_elements.append(
                     ft.Container(
-                        content=ft.Row([ft.Icon("flag", size=12, color="white"), ft.Text("סיום", color="white", weight="bold", size=10)], spacing=2), 
+                        content=ft.Row([ft.Image(src="icons/flag.svg", width=12, height=12, color="white"), ft.Text("סיום", color="white", weight="bold", size=10)], spacing=2), 
                         bgcolor="red", padding=4, border_radius=5
                     )
                 )
@@ -132,11 +118,8 @@ class ScheduleView(ft.Column):
             col_header = ft.Container(content=ft.Column(header_elements, alignment="center", horizontal_alignment="center", spacing=2), alignment=ft.Alignment(0, 0), padding=5, bgcolor="#E3F2FD", border_radius=8, height=65)
             
             day_stack = ft.Stack(height=TOTAL_HEIGHT)
-            
             for h in range(START_HOUR, END_HOUR + 1):
-                day_stack.controls.append(
-                    ft.Container(top=(h - START_HOUR) * 60 * SCALE, height=1, bgcolor="#E0E0E0", left=0, right=0)
-                )
+                day_stack.controls.append(ft.Container(top=(h - START_HOUR) * 60 * SCALE, height=1, bgcolor="#E0E0E0", left=0, right=0))
 
             day_lecs = [l for l in lectures if l.date_obj == current_day_date]
             
@@ -147,9 +130,7 @@ class ScheduleView(ft.Column):
                 is_overlapping = False
                 for other in day_lecs:
                     if lec.session_id != other.session_id:
-                        other_start_m = self.time_to_minutes(other.start_time)
-                        other_end_m = self.time_to_minutes(other.end_time)
-                        if max(lec_start_m, other_start_m) < min(lec_end_m, other_end_m):
+                        if max(lec_start_m, self.time_to_minutes(other.start_time)) < min(lec_end_m, self.time_to_minutes(other.end_time)):
                             is_overlapping = True
                             break
                 
@@ -159,11 +140,9 @@ class ScheduleView(ft.Column):
                 card = LectureCard(lec, self.refresh_ui)
                 if is_overlapping:
                     card.border = ft.border.all(2, "red")
-                    card.content.controls.insert(0, ft.Row([ft.Icon("warning_amber", color="red", size=12), ft.Text("חפיפה!", color="red", weight="bold", size=10)]))
+                    card.content.controls.insert(0, ft.Row([ft.Image(src="icons/warning_amber.svg", width=12, height=12, color="red"), ft.Text("חפיפה!", color="red", weight="bold", size=10)]))
                 
-                day_stack.controls.append(
-                    ft.Container(top=top_pos, height=height, left=0, right=0, content=card, opacity=0.9 if is_overlapping else 1.0)
-                )
+                day_stack.controls.append(ft.Container(top=top_pos, height=height, left=0, right=0, content=card, opacity=0.9 if is_overlapping else 1.0))
 
             day_col = ft.Column([col_header, ft.Container(content=day_stack, expand=True)], spacing=10)
             day_columns.append(ft.Container(content=day_col, expand=True, padding=2))
@@ -192,7 +171,7 @@ class ScheduleView(ft.Column):
         
         if not lectures:
             empty_state = ft.Column([
-                ft.Icon("event_busy", size=60, color="grey400"),
+                ft.Image(src="icons/event_busy.svg", width=60, height=60, color="grey400"),
                 ft.Text("אין הרצאות להצגה", size=18, weight="w500", color="grey600")
             ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             

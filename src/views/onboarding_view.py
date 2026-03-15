@@ -2,6 +2,7 @@ import flet as ft
 import time
 from datetime import datetime
 from models.course import Course
+from utils.i18n import t  # <-- ייבוא מנוע התרגום החדש
 
 class OnboardingView(ft.Column):
     def __init__(self, page: ft.Page, schedule, change_screen_func):
@@ -12,6 +13,7 @@ class OnboardingView(ft.Column):
         
         self.current_step = 0
         self.current_course_meetings = [] 
+        self.added_courses = []
         self.content_area = ft.Container(expand=True, padding=20)
         
         self.start_picker = ft.DatePicker(on_change=self.start_date_changed)
@@ -49,7 +51,7 @@ class OnboardingView(ft.Column):
 
     def build_welcome_screen(self):
         return ft.Column([
-            ft.Text("🎓", size=80), 
+            ft.Image(src="icons/school.svg", width=80, height=80, color="#1976D2"), 
             ft.Text("ברוך הבא למעקב ההרצאות!", size=22, weight="bold", text_align="center"),
             ft.Container(height=30),
             ft.ElevatedButton("צור סמסטר חדש", on_click=self.next_step, bgcolor="#1976D2", color="white", width=200)
@@ -73,9 +75,9 @@ class OnboardingView(ft.Column):
         return ft.Column([
             ft.Text("שלב 1: תאריכי הסמסטר", size=20, weight="bold", color="#1976D2"),
             ft.Container(height=20),
-            ft.Row([ft.ElevatedButton(content=ft.Row([ft.Text("📅"), ft.Text("בחר התחלה")]), on_click=lambda _: self.open_picker(self.start_picker)), self.start_text], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/calendar_month.svg", width=20, height=20, color="white"), ft.Text("בחר התחלה")]), on_click=lambda _: self.open_picker(self.start_picker)), self.start_text], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=10),
-            ft.Row([ft.ElevatedButton(content=ft.Row([ft.Text("📅"), ft.Text("בחר סיום")]), on_click=lambda _: self.open_picker(self.end_picker)), self.end_text], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row([ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/calendar_month.svg", width=20, height=20, color="white"), ft.Text("בחר סיום")]), on_click=lambda _: self.open_picker(self.end_picker)), self.end_text], alignment=ft.MainAxisAlignment.CENTER),
             ft.Container(height=30),
             ft.ElevatedButton("המשך לשלב הבא", on_click=self.save_dates_and_continue, bgcolor="#43A047", color="white")
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
@@ -89,57 +91,116 @@ class OnboardingView(ft.Column):
         self.schedule.set_semester(self.start_text.value, self.end_text.value)
         self.next_step()
 
+    def calc_duration_text(self, start, end):
+        h1, m1 = map(int, start.split(':'))
+        h2, m2 = map(int, end.split(':'))
+        total_mins = (h2 * 60 + m2) - (h1 * 60 + m1)
+        if total_mins <= 0: return None
+        
+        hours = total_mins // 60
+        mins = total_mins % 60
+        res = []
+        if hours == 1: res.append("שעה")
+        elif hours == 2: res.append("שעתיים")
+        elif hours > 2: res.append(f"{hours} שעות")
+        
+        if mins > 0:
+            if hours > 0: res.append(f"ו-{mins} דקות")
+            else: res.append(f"{mins} דקות")
+        return " ".join(res)
+
     def build_initial_courses_screen(self):
-        self.c_title = ft.TextField(label="שם הקורס", width=180)
-        self.c_room = ft.TextField(label="חדר", width=80)
-        self.c_day = ft.Dropdown(label="יום", options=[ft.dropdown.Option(d) for d in ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"]], width=100)
+        self.c_title = ft.TextField(label="שם הקורס", col={"xs": 12, "sm": 6})
+        self.c_code = ft.TextField(label="קוד קורס", col={"xs": 6, "sm": 3})
+        self.c_location = ft.TextField(label="מיקום", col={"xs": 6, "sm": 3})
         
-        times = [f"{h:02d}:{m:02d}" for h in range(8, 22) for m in (0, 30)]
-        self.c_start = ft.Dropdown(label="התחלה", options=[ft.dropdown.Option(t) for t in times], width=100, value="10:00")
-        self.c_dur = ft.Dropdown(label="אורך", options=[ft.dropdown.Option(key="1", text="שעה"), ft.dropdown.Option(key="2", text="שעתיים"), ft.dropdown.Option(key="3", text="3 שעות")], width=100, value="2")
+        self.c_type = ft.Dropdown(label="סוג", options=[ft.dropdown.Option("הרצאה"), ft.dropdown.Option("תרגול"), ft.dropdown.Option("מעבדה")], value="הרצאה", col={"xs": 6, "sm": 3})
+        self.c_day = ft.Dropdown(label="יום", options=[ft.dropdown.Option(d) for d in ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"]], col={"xs": 6, "sm": 3})
         
-        self.temp_meetings_view = ft.ListView(height=80, spacing=5)
-        self.added_courses_list = ft.ListView(height=120, spacing=5)
+        times = [f"{h:02d}:{m:02d}" for h in range(8, 23) for m in (0, 30)]
+        self.c_start = ft.Dropdown(label="התחלה", options=[ft.dropdown.Option(t) for t in times[:-1]], value="10:00", col={"xs": 6, "sm": 3})
+        self.c_end = ft.Dropdown(label="סיום", options=[ft.dropdown.Option(t) for t in times[1:]], value="12:00", col={"xs": 6, "sm": 3})
+        
+        self.tree_view = ft.Column(spacing=10)
+        self.added_courses_list = ft.ListView(height=80, spacing=5)
 
         return ft.Column([
             ft.Text("שלב 2: הוספת קורסים (אופציונלי)", size=20, weight="bold", color="#1976D2"),
-            ft.Row([self.c_title, self.c_room], alignment=ft.MainAxisAlignment.CENTER, wrap=True),
-            ft.Row([self.c_day, self.c_start, self.c_dur], alignment=ft.MainAxisAlignment.CENTER, wrap=True),
-            ft.ElevatedButton("➕ הוסף מפגש", on_click=self.add_meeting_to_temp, bgcolor="#F57C00", color="white"),
-            self.temp_meetings_view,
-            ft.ElevatedButton("✅ שמור קורס זה לסמסטר", on_click=self.save_temp_course, bgcolor="#1976D2", color="white"),
+            ft.ResponsiveRow([self.c_title, self.c_code, self.c_location], alignment=ft.MainAxisAlignment.CENTER),
+            ft.ResponsiveRow([self.c_type, self.c_day, self.c_start, self.c_end], alignment=ft.MainAxisAlignment.CENTER),
+            ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/add_circle.svg", width=20, height=20, color="white"), ft.Text("הוסף זמנים")]), on_click=self.add_meeting_to_temp, bgcolor="#F57C00", color="white"),
+            ft.Container(content=self.tree_view, margin=ft.margin.only(top=10, bottom=10)),
+            ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/save.svg", width=20, height=20, color="white"), ft.Text("שמור קורס זה לסמסטר")]), on_click=self.save_temp_course, bgcolor="#1976D2", color="white"),
             ft.Divider(),
             self.added_courses_list,
             ft.ElevatedButton("המשך לשלב הבא", on_click=self.next_step, bgcolor="#43A047", color="white")
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, scroll=ft.ScrollMode.AUTO)
 
     def add_meeting_to_temp(self, e):
-        if not self.c_day.value or not self.c_start.value: return
-        dur = float(self.c_dur.value)
-        h, m = map(int, self.c_start.value.split(':'))
-        end_str = f"{h + int(dur) + (m + int((dur - int(dur))*60))//60:02d}:{(m + int((dur - int(dur))*60))%60:02d}"
+        if not self.c_day.value or not self.c_start.value or not self.c_end.value: return
         
-        meeting = {"day": self.c_day.value, "start": self.c_start.value, "end": end_str, "room": self.c_room.value}
+        dur_text = self.calc_duration_text(self.c_start.value, self.c_end.value)
+        if not dur_text:
+            self.app_page.snack_bar = ft.SnackBar(ft.Text("שגיאה! שעת סיום חייבת להיות אחרי התחלה.", color="red"))
+            self.app_page.snack_bar.open = True
+            self.app_page.update()
+            return
+            
+        meeting = {"day": self.c_day.value, "start": self.c_start.value, "end": self.c_end.value, "location": self.c_location.value, "type": self.c_type.value, "dur_text": dur_text}
         self.current_course_meetings.append(meeting)
-        self.temp_meetings_view.controls.append(ft.Text(f"📌 {meeting['day']}, {meeting['start']}-{meeting['end']}", color="#F57C00"))
+        self.update_tree_view()
         self.app_page.update()
+
+    def update_tree_view(self):
+        self.tree_view.controls.clear()
+        if not self.current_course_meetings: return
+
+        groups = {"הרצאה": [], "תרגול": [], "מעבדה": []}
+        for m in self.current_course_meetings: groups[m["type"]].append(m)
+
+        # שימוש בתרגום לשם ברירת מחדל
+        c_title = self.c_title.value if self.c_title.value else t("course.new_course", "קורס חדש")
+        c_code = f" ({self.c_code.value})" if self.c_code.value else ""
+        
+        tree_nodes = [ft.Row([ft.Image(src="icons/menu_book.svg", width=20, height=20, color="#1976D2"), ft.Text(f"{c_title}{c_code}", size=16, weight="bold", color="#1976D2")])]
+        
+        for m_type, m_list in groups.items():
+            if not m_list: continue
+            
+            # השימוש המרכזי במערכת i18n שלנו לתיקון הפלורליזציה!
+            plural_type = t(f"plurals.{m_type}", default=m_type)
+            type_col = ft.Column([ft.Text(plural_type, weight="bold", color="black87")])
+            
+            for m in m_list:
+                loc_text = f" | {m['location']}" if m['location'] else ""
+                type_col.controls.append(ft.Row([
+                    ft.Image(src="icons/schedule.svg", width=14, height=14, color="grey600"),
+                    ft.Text(f"{m['day']}, {m['start']} - {m['end']} | {m['dur_text']}{loc_text}", color="grey700", size=13)
+                ]))
+            
+            tree_nodes.append(ft.Container(content=type_col, border=ft.border.only(right=ft.border.BorderSide(2, "#E0E0E0")), padding=ft.padding.only(right=15), margin=ft.margin.only(right=10)))
+            
+        self.tree_view.controls.extend(tree_nodes)
 
     def save_temp_course(self, e):
         if not self.c_title.value or len(self.current_course_meetings) == 0: return
-        new_course = Course(course_id=str(time.time()), title=self.c_title.value, lecturer="לא הוגדר")
+        new_course = Course(course_id=str(time.time()), title=self.c_title.value, lecturer="לא הוגדר", course_code=self.c_code.value)
         for m in self.current_course_meetings:
-            new_course.add_weekly_meeting(self.schedule.semester_start, self.schedule.semester_end, m["day"], m["start"], m["end"], m["room"])
+            new_course.add_weekly_meeting(self.schedule.semester_start, self.schedule.semester_end, m["day"], m["start"], m["end"], m["location"], m["type"])
         self.schedule.add_course(new_course)
-        self.added_courses_list.controls.append(ft.Text(f"✅ '{self.c_title.value}' נוסף", color="green"))
+        
+        self.added_courses_list.controls.append(ft.Row([ft.Image(src="icons/check_circle.svg", width=16, height=16, color="green"), ft.Text(f"הקורס '{self.c_title.value}' נוסף בהצלחה", color="green")]))
         self.current_course_meetings.clear()
-        self.temp_meetings_view.controls.clear()
+        self.tree_view.controls.clear()
         self.c_title.value = ""
+        self.c_code.value = ""
         self.app_page.update()
 
     def build_notifications_setup_screen(self):
         options = [ft.dropdown.Option(str(m)) for m in [0, 5, 10, 15, 30, 60]]
         self.notif_before = ft.Dropdown(label="התראה לפני (דקות)", options=options, value="15", width=150)
         return ft.Column([
+            ft.Image(src="icons/notifications_active.svg", width=60, height=60, color="#1976D2"),
             ft.Text("שלב 3: התראות", size=20, weight="bold", color="#1976D2"),
             self.notif_before,
             ft.Container(height=20),
