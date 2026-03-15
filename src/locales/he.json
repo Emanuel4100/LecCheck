@@ -71,7 +71,7 @@
         "skipped": "דילגתי ({count})", "needs_watching": "טרם נצפה / עתידי ({count})", "cancelled": "בוטלה ({count})"
     },
     "schedule_menu": {
-        "add_options": "מה תרצה להוסיף?",
+        "add_options": "?מה תרצה להוסיף",
         "add_course": "הוסף קורס חדש",
         "add_meeting": "הוסף מפגש לקורס קיים"
     },
