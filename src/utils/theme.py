@@ -7,11 +7,10 @@ class AppTheme:
     def get_theme():
         return ft.Theme(
             color_scheme_seed=AppTheme.SEED_COLOR
-            # הסרנו את visual_density כדי למנוע את השגיאה
         )
 
-    STATUS_ATTENDED = ft.Colors.GREEN_600
-    STATUS_WATCHED = ft.Colors.BLUE_600
-    STATUS_PENDING = ft.Colors.ORANGE_600
-    STATUS_SKIPPED = ft.Colors.ERROR
-    STATUS_CANCELLED = ft.Colors.OUTLINE
+    STATUS_ATTENDED = "green600"
+    STATUS_WATCHED = "blue600"
+    STATUS_PENDING = "orange600"
+    STATUS_SKIPPED = "error"
+    STATUS_CANCELLED = "outline"

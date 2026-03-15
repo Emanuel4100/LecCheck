@@ -17,7 +17,7 @@ class LectureCard(ft.Container):
         self.margin = ft.margin.only(bottom=5 if self.is_mobile else 8)
         self.bgcolor = self.lecture.course_color
         
-        self.shadow = ft.BoxShadow(spread_radius=0, blur_radius=2, color=ft.Colors.SHADOW, offset=ft.Offset(0, 1))
+        self.shadow = ft.BoxShadow(spread_radius=0, blur_radius=2, color="shadow", offset=ft.Offset(0, 1))
 
         status_colors = {
             LectureStatus.ATTENDED: AppTheme.STATUS_ATTENDED,
@@ -26,8 +26,8 @@ class LectureCard(ft.Container):
             LectureStatus.SKIPPED: AppTheme.STATUS_SKIPPED,
             LectureStatus.CANCELLED: AppTheme.STATUS_CANCELLED
         }
-        b_color = status_colors.get(self.lecture.status, ft.Colors.TRANSPARENT)
-        self.border = ft.border.all(1.5, b_color) if b_color != ft.Colors.TRANSPARENT else None
+        b_color = status_colors.get(self.lecture.status, "transparent")
+        self.border = ft.border.all(1.5, b_color) if b_color != "transparent" else None
 
         if self.is_mobile:
             self.content = self.build_compact_view()
@@ -43,7 +43,7 @@ class LectureCard(ft.Container):
                 short_title, 
                 weight="bold", 
                 size=11, 
-                color=ft.Colors.ON_SURFACE, 
+                color="onSurface", 
                 text_align="center", 
                 max_lines=3, 
                 overflow=ft.TextOverflow.ELLIPSIS
@@ -51,28 +51,28 @@ class LectureCard(ft.Container):
         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, expand=True)
 
     def build_detailed_view(self):
-        title = ft.Text(self.lecture.title, weight="w600", size=13, color=ft.Colors.ON_SURFACE, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS)
+        title = ft.Text(self.lecture.title, weight="w600", size=13, color="onSurface", no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS)
         
         time_elements = []
         if self.show_date:
             time_elements.extend([
-                ft.Image(src="icons/calendar_month.svg", width=14, height=14, color=ft.Colors.PRIMARY),
-                ft.Text(self.lecture.date_str, color=ft.Colors.PRIMARY, size=12, weight="bold"),
+                ft.Image(src="icons/calendar_month.svg", width=14, height=14, color="primary"),
+                ft.Text(self.lecture.date_str, color="primary", size=12, weight="bold"),
                 ft.Container(width=10)
             ])
             
         time_elements.extend([
-            ft.Image(src="icons/access_time.svg", width=12, height=12, color=ft.Colors.ON_SURFACE_VARIANT),
-            ft.Text(f"{self.lecture.start_time}-{self.lecture.end_time}", color=ft.Colors.ON_SURFACE_VARIANT, size=11),
+            ft.Image(src="icons/access_time.svg", width=12, height=12, color="onSurfaceVariant"),
+            ft.Text(f"{self.lecture.start_time}-{self.lecture.end_time}", color="onSurfaceVariant", size=11),
             ft.Container(width=4),
-            ft.Image(src="icons/location_on.svg", width=12, height=12, color=ft.Colors.ON_SURFACE_VARIANT),
-            ft.Text(self.lecture.room, color=ft.Colors.ON_SURFACE_VARIANT, size=11, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS)
+            ft.Image(src="icons/location_on.svg", width=12, height=12, color="onSurfaceVariant"),
+            ft.Text(self.lecture.room, color="onSurfaceVariant", size=11, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS)
         ])
 
         time_room = ft.Row(time_elements, spacing=2, alignment=ft.MainAxisAlignment.START)
 
         return ft.Column([
-            title, time_room, ft.Divider(height=1, color=ft.Colors.OUTLINE_VARIANT), self.build_status_icons()
+            title, time_room, ft.Divider(height=1, color="outlineVariant"), self.build_status_icons()
         ], spacing=6)
 
     def build_status_icons(self):
@@ -83,9 +83,9 @@ class LectureCard(ft.Container):
                 if self.update_callback: self.update_callback()
 
             return ft.Container(
-                content=ft.Image(src=f"icons/{icon_name}.svg", width=18, height=18, color=active_color if is_active else ft.Colors.OUTLINE),
+                content=ft.Image(src=f"icons/{icon_name}.svg", width=18, height=18, color=active_color if is_active else "outline"),
                 tooltip=tooltip_text,
-                bgcolor=ft.Colors.SURFACE if is_active else ft.Colors.TRANSPARENT,
+                bgcolor="surface" if is_active else "transparent",
                 border_radius=20,
                 padding=6,
                 on_click=on_status_click
@@ -100,14 +100,14 @@ class LectureCard(ft.Container):
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
     def build_popup_content(self):
-        title = ft.Text(self.lecture.title, weight="bold", size=18, color=ft.Colors.ON_SURFACE, text_align="center")
+        title = ft.Text(self.lecture.title, weight="bold", size=18, color="onSurface", text_align="center")
         
         loc_text = f" | {self.lecture.room}" if self.lecture.room else ""
         date_text = f"{self.lecture.date_str} | " if self.show_date else ""
         
         time_room = ft.Row([
-            ft.Image(src="icons/schedule.svg", width=16, height=16, color=ft.Colors.ON_SURFACE_VARIANT),
-            ft.Text(f"{date_text}{self.lecture.start_time} - {self.lecture.end_time}{loc_text}", color=ft.Colors.ON_SURFACE_VARIANT, size=14)
+            ft.Image(src="icons/schedule.svg", width=16, height=16, color="onSurfaceVariant"),
+            ft.Text(f"{date_text}{self.lecture.start_time} - {self.lecture.end_time}{loc_text}", color="onSurfaceVariant", size=14)
         ], alignment=ft.MainAxisAlignment.CENTER)
 
         options = [
@@ -130,18 +130,18 @@ class LectureCard(ft.Container):
 
             btn = ft.Container(
                 content=ft.Row([
-                    ft.Image(src=f"icons/{icon_name}.svg", width=22, height=22, color=active_color if is_active else ft.Colors.ON_SURFACE_VARIANT),
-                    ft.Text(text_label, size=15, weight="bold" if is_active else "normal", color=active_color if is_active else ft.Colors.ON_SURFACE)
+                    ft.Image(src=f"icons/{icon_name}.svg", width=22, height=22, color=active_color if is_active else "onSurfaceVariant"),
+                    ft.Text(text_label, size=15, weight="bold" if is_active else "normal", color=active_color if is_active else "onSurface")
                 ], alignment=ft.MainAxisAlignment.START),
                 padding=10, border_radius=8,
-                bgcolor=ft.Colors.SURFACE if is_active else ft.Colors.TRANSPARENT,
-                border=ft.border.all(2, active_color) if is_active else ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                bgcolor="surface" if is_active else "transparent",
+                border=ft.border.all(2, active_color) if is_active else ft.border.all(1, "outlineVariant"),
                 on_click=make_click_handler(status_value), ink=True
             )
             buttons.append(btn)
 
         return ft.Column([
-            title, time_room, ft.Divider(height=1, color=ft.Colors.OUTLINE_VARIANT), ft.Column(buttons, spacing=8)
+            title, time_room, ft.Divider(height=1, color="outlineVariant"), ft.Column(buttons, spacing=8)
         ], spacing=10, tight=True)
 
     def open_popup(self, e):

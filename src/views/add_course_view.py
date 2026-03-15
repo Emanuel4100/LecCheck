@@ -17,8 +17,8 @@ class AddCourseView(ft.Column):
         self.has_lecturer = ft.Checkbox(label=t("course_form.add_lecturer"), value=False, on_change=self.toggle_optional_fields)
         self.has_link = ft.Checkbox(label=t("course_form.add_link"), value=False, on_change=self.toggle_optional_fields)
         
-        self.lecturer_input = ft.TextField(label=t("course_form.lecturer"), prefix=ft.Container(content=ft.Image(src="icons/person.svg", width=18, height=18, color=ft.Colors.ON_SURFACE_VARIANT), margin=ft.margin.only(left=10, right=10)), visible=False, col={"xs": 12, "sm": 6})
-        self.link_input = ft.TextField(label=t("course_form.link"), hint_text=t("course_form.link_hint"), prefix=ft.Container(content=ft.Image(src="icons/link.svg", width=18, height=18, color=ft.Colors.ON_SURFACE_VARIANT), margin=ft.margin.only(left=10, right=10)), visible=False, col={"xs": 12, "sm": 6})
+        self.lecturer_input = ft.TextField(label=t("course_form.lecturer"), prefix=ft.Container(content=ft.Image(src="icons/person.svg", width=18, height=18, color="onSurfaceVariant"), margin=ft.margin.only(left=10, right=10)), visible=False, col={"xs": 12, "sm": 6})
+        self.link_input = ft.TextField(label=t("course_form.link"), hint_text=t("course_form.link_hint"), prefix=ft.Container(content=ft.Image(src="icons/link.svg", width=18, height=18, color="onSurfaceVariant"), margin=ft.margin.only(left=10, right=10)), visible=False, col={"xs": 12, "sm": 6})
         
         self.type_dropdown = ft.Dropdown(label=t("course_form.type"), options=[ft.dropdown.Option(key="meeting_types.lecture", text=t("meeting_types.lecture")), ft.dropdown.Option(key="meeting_types.practice", text=t("meeting_types.practice")), ft.dropdown.Option(key="meeting_types.lab", text=t("meeting_types.lab"))], value="meeting_types.lecture", col={"xs": 6, "sm": 4, "md": 2})
         self.day_dropdown = ft.Dropdown(label=t("course_form.day"), options=[ft.dropdown.Option(key=f"days.{d}", text=t(f"days.{d}")) for d in ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]], col={"xs": 6, "sm": 4, "md": 2})
@@ -28,16 +28,16 @@ class AddCourseView(ft.Column):
         self.start_dropdown.on_change = self.handle_start_change
         
         self.end_dropdown = ft.Dropdown(label=t("course_form.end"), options=[ft.dropdown.Option(tm) for tm in times[1:]], value="11:00", col={"xs": 6, "sm": 6, "md": 2})
-        self.location_input = ft.TextField(label=t("course_form.location"), hint_text=t("course_form.location_hint"), prefix=ft.Container(content=ft.Image(src="icons/place.svg", width=18, height=18, color=ft.Colors.ON_SURFACE_VARIANT), margin=ft.margin.only(left=10, right=10)), col={"xs": 12, "sm": 6, "md": 4})
+        self.location_input = ft.TextField(label=t("course_form.location"), hint_text=t("course_form.location_hint"), prefix=ft.Container(content=ft.Image(src="icons/place.svg", width=18, height=18, color="onSurfaceVariant"), margin=ft.margin.only(left=10, right=10)), col={"xs": 12, "sm": 6, "md": 4})
         
         self.tree_view = ft.Column(spacing=10)
 
         header = ft.Container(
             content=ft.Row([
-                ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color=ft.Colors.ON_PRIMARY), ft.Text(t("common.back"), color=ft.Colors.ON_PRIMARY, weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
-                ft.Text(t("course_form.title_add"), size=20, weight="bold", color=ft.Colors.ON_PRIMARY)
+                ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
+                ft.Text(t("course_form.title_add"), size=20, weight="bold", color="onPrimary")
             ]),
-            bgcolor=ft.Colors.PRIMARY, padding=5, border_radius=10
+            bgcolor="primary", padding=5, border_radius=10
         )
 
         self.controls = [
@@ -45,17 +45,17 @@ class AddCourseView(ft.Column):
             ft.Container(
                 padding=20, expand=True,
                 content=ft.Column([
-                    ft.Text(t("course_form.details"), weight="bold", size=16, color=ft.Colors.ON_SURFACE),
+                    ft.Text(t("course_form.details"), weight="bold", size=16, color="onSurface"),
                     ft.ResponsiveRow([self.title_input, self.code_input]),
                     ft.Row([self.has_lecturer, self.has_link]),
                     ft.ResponsiveRow([self.lecturer_input, self.link_input]),
-                    ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
-                    ft.Text(t("course_form.add_times"), weight="bold", size=16, color=ft.Colors.ON_SURFACE),
+                    ft.Divider(color="outlineVariant"),
+                    ft.Text(t("course_form.add_times"), weight="bold", size=16, color="onSurface"),
                     ft.ResponsiveRow([self.type_dropdown, self.day_dropdown, self.start_dropdown, self.end_dropdown, self.location_input]),
-                    ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/add_circle.svg", width=20, height=20, color=ft.Colors.ON_SECONDARY_CONTAINER), ft.Text(t("course_form.add_time_btn"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor=ft.Colors.SECONDARY_CONTAINER, color=ft.Colors.ON_SECONDARY_CONTAINER), on_click=self.add_meeting),
+                    ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/add_circle.svg", width=20, height=20, color="onSecondaryContainer"), ft.Text(t("course_form.add_time_btn"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor="secondaryContainer", color="onSecondaryContainer"), on_click=self.add_meeting),
                     ft.Container(content=self.tree_view, margin=ft.margin.only(top=10, bottom=10)),
-                    ft.Divider(color=ft.Colors.OUTLINE_VARIANT),
-                    ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/save.svg", width=20, height=20, color=ft.Colors.ON_PRIMARY), ft.Text(t("course_form.save_btn"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor=ft.Colors.PRIMARY, color=ft.Colors.ON_PRIMARY), on_click=self.save_course, height=45)
+                    ft.Divider(color="outlineVariant"),
+                    ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/save.svg", width=20, height=20, color="onPrimary"), ft.Text(t("course_form.save_btn"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor="primary", color="onPrimary"), on_click=self.save_course, height=45)
                 ], spacing=15, scroll=ft.ScrollMode.AUTO)
             )
         ]
@@ -95,7 +95,7 @@ class AddCourseView(ft.Column):
         if not self.day_dropdown.value or not self.start_dropdown.value or not self.end_dropdown.value: return
         dur_text = self.calc_duration_text(self.start_dropdown.value, self.end_dropdown.value)
         if not dur_text:
-            self.app_page.snack_bar = ft.SnackBar(ft.Text(t("course_form.time_error"), color=ft.Colors.ON_ERROR), bgcolor=ft.Colors.ERROR); self.app_page.snack_bar.open = True; self.app_page.update()
+            self.app_page.snack_bar = ft.SnackBar(ft.Text(t("course_form.time_error"), color="onError"), bgcolor="error"); self.app_page.snack_bar.open = True; self.app_page.update()
             return
         meeting = {"day_key": self.day_dropdown.value, "start": self.start_dropdown.value, "end": self.end_dropdown.value, "location": self.location_input.value, "type_key": self.type_dropdown.value, "dur_text": dur_text}
         self.weekly_meetings.append(meeting); self.update_tree_view(); self.app_page.update()
@@ -115,29 +115,29 @@ class AddCourseView(ft.Column):
 
         c_title = self.title_input.value if self.title_input.value else t("course_form.new_course_def")
         c_code = f" ({self.code_input.value})" if self.code_input.value else ""
-        tree_nodes = [ft.Row([ft.Image(src="icons/menu_book.svg", width=20, height=20, color=ft.Colors.PRIMARY), ft.Text(f"{c_title}{c_code}", size=16, weight="bold", color=ft.Colors.PRIMARY)])]
+        tree_nodes = [ft.Row([ft.Image(src="icons/menu_book.svg", width=20, height=20, color="primary"), ft.Text(f"{c_title}{c_code}", size=16, weight="bold", color="primary")])]
         
         for m_type_key, m_list in groups.items():
             if not m_list: continue
             plural_key = m_type_key.replace("meeting_types.", "plurals.")
-            type_col = ft.Column([ft.Text(t(plural_key), weight="bold", color=ft.Colors.ON_SURFACE)])
+            type_col = ft.Column([ft.Text(t(plural_key), weight="bold", color="onSurface")])
             for m in m_list:
                 loc_text = f" | {m['location']}" if m['location'] else ""
                 actions = ft.Row([
-                    ft.Container(content=ft.Image(src="icons/edit.svg", width=16, height=16, color=ft.Colors.PRIMARY), on_click=lambda _, meet=m: self.edit_meeting(meet), tooltip="ערוך", padding=4, ink=True, border_radius=10),
-                    ft.Container(content=ft.Image(src="icons/delete.svg", width=16, height=16, color=ft.Colors.ERROR), on_click=lambda _, meet=m: self.delete_meeting(meet), tooltip="מחק", padding=4, ink=True, border_radius=10)
+                    ft.Container(content=ft.Image(src="icons/edit.svg", width=16, height=16, color="primary"), on_click=lambda _, meet=m: self.edit_meeting(meet), tooltip="ערוך", padding=4, ink=True, border_radius=10),
+                    ft.Container(content=ft.Image(src="icons/delete.svg", width=16, height=16, color="error"), on_click=lambda _, meet=m: self.delete_meeting(meet), tooltip="מחק", padding=4, ink=True, border_radius=10)
                 ], spacing=2)
                 item = ft.Row([
-                    ft.Row([ft.Image(src="icons/schedule.svg", width=14, height=14, color=ft.Colors.ON_SURFACE_VARIANT), ft.Text(f"{t(m['day_key'])}, {m['start']} - {m['end']} | {m['dur_text']}{loc_text}", color=ft.Colors.ON_SURFACE_VARIANT, size=13)], expand=True),
+                    ft.Row([ft.Image(src="icons/schedule.svg", width=14, height=14, color="onSurfaceVariant"), ft.Text(f"{t(m['day_key'])}, {m['start']} - {m['end']} | {m['dur_text']}{loc_text}", color="onSurfaceVariant", size=13)], expand=True),
                     actions
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                 type_col.controls.append(item)
-            tree_nodes.append(ft.Container(content=type_col, border=ft.border.only(right=ft.border.BorderSide(2, ft.Colors.OUTLINE_VARIANT)), padding=ft.padding.only(right=15), margin=ft.margin.only(right=10)))
+            tree_nodes.append(ft.Container(content=type_col, border=ft.border.only(right=ft.border.BorderSide(2, "outlineVariant")), padding=ft.padding.only(right=15), margin=ft.margin.only(right=10)))
         self.tree_view.controls.extend(tree_nodes)
 
     def save_course(self, e):
         if not self.title_input.value or len(self.weekly_meetings) == 0:
-            self.app_page.snack_bar = ft.SnackBar(ft.Text(t("course_form.missing_info"), color=ft.Colors.ON_ERROR), bgcolor=ft.Colors.ERROR); self.app_page.snack_bar.open = True; self.app_page.update()
+            self.app_page.snack_bar = ft.SnackBar(ft.Text(t("course_form.missing_info"), color="onError"), bgcolor="error"); self.app_page.snack_bar.open = True; self.app_page.update()
             return
             
         new_course = Course(course_id=str(time.time()), title=self.title_input.value, lecturer=(self.lecturer_input.value if self.has_lecturer.value else ""), course_code=self.code_input.value, link=(self.link_input.value if self.has_link.value else ""))

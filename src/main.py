@@ -7,6 +7,7 @@ from views.onboarding_view import OnboardingView
 from views.settings_view import SettingsView
 from utils.i18n import translator, t
 from utils.theme import AppTheme 
+
 def main(page: ft.Page):
     my_schedule = SemesterSchedule()
     my_schedule.load_from_file()
