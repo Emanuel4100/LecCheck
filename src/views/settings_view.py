@@ -47,16 +47,11 @@ class SettingsView(ft.Column):
                     else: self.schedule.semester_end = parsed_date
                     self.update_date_texts()
                     self.recalc_all()
-                
-                if picker in self.app_page.overlay:
-                    self.app_page.overlay.remove(picker)
-                self.app_page.update()
 
             picker = ft.DatePicker(
                 first_date=datetime(2020, 1, 1),
                 last_date=datetime(2030, 12, 31),
-                on_change=handle_change,
-                on_dismiss=lambda ev: self.app_page.overlay.remove(picker) if picker in self.app_page.overlay else None
+                on_change=handle_change
             )
             self.app_page.overlay.append(picker)
             picker.open = True
@@ -66,23 +61,28 @@ class SettingsView(ft.Column):
         self.end_text = ft.Text("")
         self.update_date_texts()
 
+        # התיקון: הסרת הטקסט הכפול בתוך הגדרת הכפתור
         date_section = ft.Column([
             ft.Text(t("settings.dates"), weight="bold"),
             ft.Row([
-                # תיקון: שימוש בשם האייקון כמחרוזת במקום קבוע שעלול להשתנות
-                ft.ElevatedButton(t("settings.change_start", default="שנה התחלה"), icon="calendar_month", on_click=lambda e: pick_date(e, True)),
+                ft.ElevatedButton(
+                    content=ft.Row([ft.Image(src="icons/calendar_month.svg", width=18, height=18, color="primary"), ft.Text(t("settings.change_start", default="שנה התחלה"), color="primary")]), 
+                    on_click=lambda e: pick_date(e, True)
+                ),
                 self.start_text
             ]),
             ft.Row([
-                # תיקון: שימוש בשם האייקון כמחרוזת
-                ft.ElevatedButton(t("settings.change_end", default="שנה סיום"), icon="calendar_month", on_click=lambda e: pick_date(e, False)),
+                ft.ElevatedButton(
+                    content=ft.Row([ft.Image(src="icons/calendar_month.svg", width=18, height=18, color="primary"), ft.Text(t("settings.change_end", default="שנה סיום"), color="primary")]), 
+                    on_click=lambda e: pick_date(e, False)
+                ),
                 self.end_text
             ])
         ], spacing=10)
 
         header = ft.Container(
             content=ft.Row([
-                ft.TextButton(content=ft.Row([ft.Icon("arrow_forward", size=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
+                ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
                 ft.Text(t("schedule.settings"), size=20, weight="bold", color="onPrimary")
             ]),
             bgcolor="primary", padding=5, border_radius=10
@@ -105,13 +105,14 @@ class SettingsView(ft.Column):
     def update_date_texts(self):
         if self.schedule.semester_start:
             self.start_text.value = self.schedule.semester_start.strftime("%d/%m/%Y")
-        else:
-            self.start_text.value = ""
-            
         if self.schedule.semester_end:
             self.end_text.value = self.schedule.semester_end.strftime("%d/%m/%Y")
-        else:
-            self.end_text.value = ""
+        
+        try:
+            if self.page:
+                self.update()
+        except Exception:
+            pass
 
     def change_language(self, e):
         self.schedule.language = self.lang_dropdown.value

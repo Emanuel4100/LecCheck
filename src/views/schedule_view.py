@@ -46,14 +46,14 @@ class ScheduleView(ft.Column):
 
         self.header = ft.Container(
             content=ft.Row([
-                ft.Container(content=ft.Icon("settings", size=24, color="onPrimary"), tooltip=t("schedule.settings"), padding=10, on_click=lambda _: self.change_screen("settings")),
+                ft.Container(content=ft.Image(src="icons/settings.svg", width=24, height=24, color="onPrimary"), tooltip=t("schedule.settings"), padding=10, on_click=lambda _: self.change_screen("settings")),
                 ft.Text(t("schedule.app_title"), size=22, weight="bold", color="onPrimary"),
                 ft.Container(width=48)
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             bgcolor="primary", padding=15, border_radius=ft.border_radius.only(bottom_left=15, bottom_right=15), shadow=ft.BoxShadow(blur_radius=5, color="shadow")
         )
 
-        add_btn = ft.FloatingActionButton(content=ft.Icon("add", size=24, color="onPrimaryContainer"), bgcolor="primaryContainer", shape=ft.RoundedRectangleBorder(radius=16), on_click=self.open_add_menu)
+        add_btn = ft.FloatingActionButton(content=ft.Image(src="icons/add.svg", width=24, height=24, color="onPrimaryContainer"), bgcolor="primaryContainer", shape=ft.RoundedRectangleBorder(radius=16), on_click=self.open_add_menu)
         
         self.controls = [
             self.header,
@@ -86,34 +86,24 @@ class ScheduleView(ft.Column):
 
     def open_add_menu(self, e):
         def close_and_go(screen_name):
-            bs.open = False
-            # [תיקון] - ניקוי מה-overlay
-            if bs in self.app_page.overlay:
-                self.app_page.overlay.remove(bs)
-            self.app_page.update()
-            self.change_screen(screen_name)
+            bs.open = False; self.app_page.update(); self.change_screen(screen_name)
             
         def close_and_open_oneoff():
-            bs.open = False
-            # [תיקון] - ניקוי מה-overlay
-            if bs in self.app_page.overlay:
-                self.app_page.overlay.remove(bs)
-            self.app_page.update()
-            self.open_oneoff_event_dialog()
+            bs.open = False; self.app_page.update(); self.open_oneoff_event_dialog()
 
         if self.selected_tab == t("schedule.tab_lectures"):
             options_content = ft.Column([
                 ft.Text(t("schedule.add_task", default="משימה חדשה"), size=18, weight="bold", color="onSurface"),
                 ft.Divider(color="outlineVariant"),
-                ft.ListTile(leading=ft.Icon("video_camera_front", color="primary"), title=ft.Text(t("schedule.add_recording", default="הקלטה להשלמה"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
-                ft.ListTile(leading=ft.Icon("event", color="tertiary"), title=ft.Text(t("schedule.add_custom_event", default="אירוע חריג"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
+                ft.ListTile(leading=ft.Image(src="icons/smart_display.svg", width=24, height=24, color="primary"), title=ft.Text(t("schedule.add_recording", default="הקלטה להשלמה"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
+                ft.ListTile(leading=ft.Image(src="icons/calendar_month.svg", width=24, height=24, color="tertiary"), title=ft.Text(t("schedule.add_custom_event", default="אירוע חריג"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
             ], tight=True)
         else:
             options_content = ft.Column([
                 ft.Text(t("schedule_menu.add_options"), size=18, weight="bold", color="onSurface"),
                 ft.Divider(color="outlineVariant"),
-                ft.ListTile(leading=ft.Icon("menu_book", color="primary"), title=ft.Text(t("schedule_menu.add_course"), color="onSurface"), on_click=lambda _: close_and_go("add")),
-                ft.ListTile(leading=ft.Icon("schedule", color="tertiary"), title=ft.Text(t("schedule_menu.add_meeting"), color="onSurface"), on_click=lambda _: close_and_go("add_meeting"))
+                ft.ListTile(leading=ft.Image(src="icons/menu_book.svg", width=24, height=24, color="primary"), title=ft.Text(t("schedule_menu.add_course"), color="onSurface"), on_click=lambda _: close_and_go("add")),
+                ft.ListTile(leading=ft.Image(src="icons/schedule.svg", width=24, height=24, color="tertiary"), title=ft.Text(t("schedule_menu.add_meeting"), color="onSurface"), on_click=lambda _: close_and_go("add_meeting"))
             ], tight=True)
 
         bs = ft.BottomSheet(ft.Container(padding=20, bgcolor="surface", content=options_content))
@@ -156,16 +146,10 @@ class ScheduleView(ft.Column):
                 self.schedule.save_to_file()
                 self.refresh_ui()
                 dlg.open = False
-                # [תיקון] - הסרה מזיכרון ה-overlay
-                if dlg in self.app_page.overlay:
-                    self.app_page.overlay.remove(dlg)
                 self.app_page.update()
                 
         def close_dialog(e):
             dlg.open = False
-            # [תיקון] - הסרה מזיכרון ה-overlay
-            if dlg in self.app_page.overlay:
-                self.app_page.overlay.remove(dlg)
             self.app_page.update()
 
         dlg = ft.AlertDialog(
@@ -214,7 +198,7 @@ class ScheduleView(ft.Column):
             
             nav_btn = ft.Container(
                 content=ft.Column([
-                    ft.Icon(icon_name, size=24, color=color),
+                    ft.Image(src=f"icons/{icon_name}.svg", width=24, height=24, color=color),
                     ft.Text(tab_name, size=11, color=color, weight="bold" if is_selected else "normal")
                 ], spacing=4, alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 expand=True, ink=True, border_radius=10,

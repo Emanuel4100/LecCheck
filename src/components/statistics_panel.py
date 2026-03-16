@@ -10,7 +10,6 @@ class StatisticsPanel(ft.Column):
 
     def build_ui(self):
         self.controls.clear()
-        
         lectures = self.schedule.get_all_lectures()
         
         total = len(lectures)
@@ -22,7 +21,6 @@ class StatisticsPanel(ft.Column):
         total_mins_all = 0
         total_mins_completed = 0
 
-        # חישוב מדויק של זמן כולל וזמן שהושלם
         for l in lectures:
             lec_mins = 0
             if l.duration_mins:
@@ -55,17 +53,16 @@ class StatisticsPanel(ft.Column):
             self._build_stat_card(t("status.needs_watching"), str(pending), "pending", "orange"),
             self._build_stat_card(t("status.skipped"), str(skipped), "cancel", "red"),
             ft.Divider(color="outlineVariant"),
-            self._build_stat_card(t("stats.time_completed", default="זמן שהושלם"), format_time(total_mins_completed), "task_alt", "green"),
+            self._build_stat_card(t("stats.time_completed", default="זמן שהושלם"), format_time(total_mins_completed), "check", "green"),
             self._build_stat_card(t("stats.total_time", default="זמן כולל"), format_time(total_mins_all), "access_time", "primary"),
             self._build_stat_card(t("stats.total_meetings", default="סך הכל מפגשים"), str(total), "calendar_month", "onSurfaceVariant")
         ]
 
     def _build_stat_card(self, title, value, icon_name, color):
-        # שימוש ב-ft.Icon במקום קובץ SVG כדי למנוע לעולם "שבירת" אייקונים!
         return ft.Container(
             content=ft.Row([
                 ft.Row([
-                    ft.Icon(name=icon_name, size=24, color=color),
+                    ft.Image(src=f"icons/{icon_name}.svg", width=24, height=24, color=color),
                     ft.Text(title, size=15, weight="w500", color="onSurface")
                 ], spacing=10),
                 ft.Text(value, size=18, weight="bold", color="onSurface")

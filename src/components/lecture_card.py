@@ -47,7 +47,7 @@ class LectureCard(ft.Container):
         time_elements = []
         if self.show_date:
             time_elements.extend([
-                ft.Icon("calendar_month", size=14, color="primary"),
+                ft.Image(src="icons/calendar_month.svg", width=14, height=14, color="primary"),
                 ft.Text(self.lecture.date_str, color="primary", size=12, weight="bold"),
                 ft.Container(width=10)
             ])
@@ -60,10 +60,10 @@ class LectureCard(ft.Container):
             time_text = t("lecture.custom_task", default="משימה")
             
         time_elements.extend([
-            ft.Icon("access_time", size=12, color="onSurfaceVariant"),
+            ft.Image(src="icons/access_time.svg", width=12, height=12, color="onSurfaceVariant"),
             ft.Text(time_text, color="onSurfaceVariant", size=11),
             ft.Container(width=4),
-            ft.Icon("location_on", size=12, color="onSurfaceVariant"),
+            ft.Image(src="icons/place.svg", width=12, height=12, color="onSurfaceVariant"),
             ft.Text(self.lecture.room if self.lecture.room else t("lecture.no_room", default="ללא מיקום"), color="onSurfaceVariant", size=11, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS)
         ])
 
@@ -72,13 +72,22 @@ class LectureCard(ft.Container):
         link_container = ft.Container()
         if self.lecture.external_link:
             link_container = ft.Row([
-                ft.Icon("link", size=12, color="primary"),
+                ft.Image(src="icons/link.svg", width=12, height=12, color="primary"),
                 ft.Text(t("lecture.attachment_included", default="מצורף קישור"), color="primary", size=11, italic=True)
             ])
 
         actions_row = ft.Row([
             self.build_single_status_button(),
-            ft.IconButton(icon="edit_outlined", icon_color="primary", icon_size=18, tooltip=t("lecture.edit_meeting", default="ערוך"), on_click=self.open_edit_dialog)
+            
+            # כפתור עריכה בטוח לחלוטין שמחליף את ה-IconButton!
+            ft.Container(
+                content=ft.Image(src="icons/edit.svg", width=18, height=18, color="primary"), 
+                tooltip=t("lecture.edit_meeting", default="ערוך"), 
+                on_click=self.open_edit_dialog,
+                padding=8,
+                border_radius=20,
+                ink=True
+            )
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
         return ft.Column([title, time_room, link_container, ft.Divider(height=1, color="outlineVariant"), actions_row], spacing=6)
@@ -108,7 +117,7 @@ class LectureCard(ft.Container):
                 ft.PopupMenuItem(
                     data=status_value,
                     content=ft.Row([
-                        ft.Icon(icon_name, size=20, color=active_color),
+                        ft.Image(src=f"icons/{icon_name}.svg", width=20, height=20, color=active_color),
                         ft.Text(text_label, color="onSurface", weight="bold" if status_value == self.lecture.status else "normal")
                     ]),
                     on_click=on_status_selected
@@ -118,9 +127,8 @@ class LectureCard(ft.Container):
         return ft.PopupMenuButton(
             content=ft.Container(
                 content=ft.Row([
-                    ft.Icon(current_icon, size=18, color=current_color),
-                    ft.Text(t(self.lecture.status), color=current_color, size=12, weight="bold"),
-                    ft.Icon("arrow_drop_down", color=current_color, size=16)
+                    ft.Image(src=f"icons/{current_icon}.svg", width=18, height=18, color=current_color),
+                    ft.Text(t(self.lecture.status), color=current_color, size=12, weight="bold")
                 ], spacing=4),
                 padding=ft.padding.symmetric(horizontal=10, vertical=5),
                 bgcolor="surface", border_radius=20, border=ft.border.all(1, current_color)
@@ -137,17 +145,11 @@ class LectureCard(ft.Container):
             if dur_input.value.isdigit():
                 self.lecture.duration_mins = int(dur_input.value)
             self.current_dialog.open = False
-            # [תיקון] - הסרה מהזיכרון
-            if self.current_dialog in e.page.overlay:
-                e.page.overlay.remove(self.current_dialog)
             e.page.update()
             if self.update_callback: self.update_callback()
             
         def close_dialog(args):
             self.current_dialog.open = False
-            # [תיקון] - הסרה מהזיכרון
-            if self.current_dialog in e.page.overlay:
-                e.page.overlay.remove(self.current_dialog)
             e.page.update()
 
         self.current_dialog = ft.AlertDialog(
@@ -178,20 +180,15 @@ class LectureCard(ft.Container):
         for icon_name, status_value, text_label, active_color in options:
             is_active = (self.lecture.status == status_value)
             def make_click_handler(stat_val):
-                def on_click(ev):
+                def on_click(e):
                     self.lecture.status = stat_val
                     if self.update_callback: self.update_callback()
-                    if self.current_dialog: 
-                        self.current_dialog.open = False
-                        # [תיקון] - הסרה מהזיכרון
-                        if self.current_dialog in ev.page.overlay:
-                            ev.page.overlay.remove(self.current_dialog)
-                        ev.page.update()
+                    if self.current_dialog: self.current_dialog.open = False; e.page.update()
                 return on_click
 
             btn = ft.Container(
                 content=ft.Row([
-                    ft.Icon(icon_name, size=22, color=active_color if is_active else "onSurfaceVariant"),
+                    ft.Image(src=f"icons/{icon_name}.svg", width=22, height=22, color=active_color if is_active else "onSurfaceVariant"),
                     ft.Text(text_label, size=15, weight="bold" if is_active else "normal", color=active_color if is_active else "onSurface")
                 ], alignment=ft.MainAxisAlignment.START),
                 padding=10, border_radius=8, bgcolor="surface" if is_active else "transparent",
@@ -200,17 +197,13 @@ class LectureCard(ft.Container):
             )
             buttons.append(btn)
 
-        edit_btn = ft.TextButton(icon="edit", text=t("lecture.edit_meeting", default="ערוך"), on_click=self.open_edit_dialog)
+        edit_btn = ft.TextButton(content=ft.Row([ft.Image(src="icons/edit.svg", width=18, height=18, color="primary"), ft.Text(t("lecture.edit_meeting", default="ערוך"), color="primary")]), on_click=self.open_edit_dialog)
 
         return ft.Column([title, link_container, ft.Divider(height=1, color="outlineVariant"), ft.Column(buttons, spacing=8), edit_btn], spacing=10, tight=True)
 
     def open_popup(self, e):
         def close_dlg(args):
-            self.current_dialog.open = False
-            # [תיקון] - הסרה מהזיכרון
-            if self.current_dialog in e.page.overlay:
-                e.page.overlay.remove(self.current_dialog)
-            e.page.update()
+            self.current_dialog.open = False; e.page.update()
 
         self.current_dialog = ft.AlertDialog(
             content=ft.Container(content=self.build_popup_content(), width=320, padding=10),

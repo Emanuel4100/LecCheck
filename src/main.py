@@ -5,43 +5,19 @@ from views.schedule_view import ScheduleView
 from views.add_course_view import AddCourseView
 from views.add_meeting_view import AddMeetingView
 from views.settings_view import SettingsView
+from utils.theme import AppTheme
 
 def main(page: ft.Page):
     page.title = "Lecture Tracker"
     page.theme_mode = ft.ThemeMode.LIGHT
     
-    # הגדרת צבעים בטוחה שתואמת לכל הגרסאות של Flet
-    page.theme = ft.Theme(
-        color_scheme=ft.ColorScheme(
-            primary="#006493",
-            on_primary="#ffffff",
-            primary_container="#cae6ff",
-            on_primary_container="#001e30",
-            secondary="#50606e",
-            on_secondary="#ffffff",
-            secondary_container="#d3e5f5",
-            on_secondary_container="#0b1d29",
-            tertiary="#65587b",
-            on_tertiary="#ffffff",
-            tertiary_container="#ebddff",
-            on_tertiary_container="#201634",
-            error="#ba1a1a",
-            on_error="#ffffff",
-            error_container="#ffdad6",
-            on_error_container="#410002",
-            surface="#fcfcff",
-            on_surface="#1a1c1e",
-            on_surface_variant="#42474e",
-            outline="#72777f"
-        )
-    )
+    # חזרנו לארכיטקטורה המקורית והחכמה שלך!
+    page.theme = AppTheme.get_theme()
     page.rtl = True
     
-    # [תיקון] - מעבירים את ה-page למודל כדי שידע לשמור ל-client_storage במובייל
-    my_schedule = SemesterSchedule(page)
+    my_schedule = SemesterSchedule()
     
     def change_screen(screen_name):
-        # [תיקון] - חובה לנקות מאזינים גלובליים לפני החלפת מסך כדי למנוע קריסות (Memory Leaks)
         page.on_resize = None 
         page.controls.clear()
         

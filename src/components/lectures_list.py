@@ -41,9 +41,9 @@ class LecturesList(ft.Column):
 
         sort_dropdown = ft.Dropdown(
             options=[
-                ft.dropdown.Option("date", t("schedule.sort_date")),
-                ft.dropdown.Option("duration", t("schedule.sort_duration")),
-                ft.dropdown.Option("type", t("schedule.sort_type"))
+                ft.dropdown.Option("date", t("schedule.sort_date", default="מיון: תאריך")),
+                ft.dropdown.Option("duration", t("schedule.sort_duration", default="מיון: אורך")),
+                ft.dropdown.Option("type", t("schedule.sort_type", default="מיון: סוג"))
             ],
             value=self.current_sort_method, width=150, dense=True
         )
@@ -60,7 +60,6 @@ class LecturesList(ft.Column):
         elif self.selected_lecture_filter == t("schedule.tab_future"):
             lectures = self.schedule.get_future_lectures()
             
-        # הגנה מקריסות מיון (Safe Sorting) - מטפל במידע חסר/ריק
         if self.current_sort_method == "duration":
             lectures.sort(key=lambda x: x.duration_mins or 0, reverse=True)
         elif self.current_sort_method == "type":
@@ -70,7 +69,7 @@ class LecturesList(ft.Column):
 
         if not lectures:
             empty_state = ft.Column([
-                ft.Icon("event_busy", size=60, color="onSurfaceVariant"), 
+                ft.Image(src="icons/event_busy.svg", width=60, height=60, color="onSurfaceVariant"), 
                 ft.Text(t("schedule.no_lectures"), size=18, weight="w500", color="onSurfaceVariant")
             ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             list_view.controls.append(ft.Container(content=empty_state, alignment=ft.Alignment(0, 0), padding=ft.padding.only(top=100)))

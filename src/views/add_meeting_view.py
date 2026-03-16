@@ -19,11 +19,11 @@ class AddMeetingView(ft.Column):
         self.start_dropdown.on_change = self.handle_start_change
         
         self.end_dropdown = ft.Dropdown(label=t("course_form.end"), options=[ft.dropdown.Option(tm) for tm in times[1:]], value="11:00", col={"xs": 6, "sm": 6})
-        self.location_input = ft.TextField(label=t("course_form.location"), hint_text=t("course_form.location_hint"), prefix=ft.Container(content=ft.Icon("location_on", size=18, color="onSurfaceVariant"), margin=ft.margin.only(left=10, right=10)), col={"xs": 12, "sm": 4})
+        self.location_input = ft.TextField(label=t("course_form.location"), hint_text=t("course_form.location_hint"), prefix=ft.Container(content=ft.Image(src="icons/place.svg", width=18, height=18, color="onSurfaceVariant"), margin=ft.margin.only(left=10, right=10)), col={"xs": 12, "sm": 4})
 
         header = ft.Container(
             content=ft.Row([
-                ft.TextButton(content=ft.Row([ft.Icon("arrow_forward", size=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
+                ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
                 ft.Text(t("meeting_form.title", default="הוספת מפגש"), size=20, weight="bold", color="onPrimary")
             ]),
             bgcolor="primary", padding=5, border_radius=10
@@ -40,7 +40,7 @@ class AddMeetingView(ft.Column):
                     ft.Text(t("course_form.add_times"), weight="bold", size=16, color="onSurface"),
                     ft.ResponsiveRow([self.type_dropdown, self.day_dropdown, self.start_dropdown, self.end_dropdown, self.location_input]),
                     ft.Divider(color="outlineVariant", height=30),
-                    ft.ElevatedButton(content=ft.Row([ft.Icon("save", size=20, color="onPrimary"), ft.Text(t("meeting_form.save_btn", default="שמור"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor="primary", color="onPrimary"), on_click=self.save_meeting, height=45)
+                    ft.ElevatedButton(content=ft.Row([ft.Image(src="icons/save.svg", width=20, height=20, color="onPrimary"), ft.Text(t("meeting_form.save_btn", default="שמור"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor="primary", color="onPrimary"), on_click=self.save_meeting, height=45)
                 ], spacing=15)
             )
         ]
