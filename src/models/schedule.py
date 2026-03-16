@@ -18,18 +18,13 @@ class SemesterSchedule:
         return self.semester_start is not None and self.semester_end is not None
 
     def _safe_parse_date(self, d):
-        """פונקציה חכמה שממירה תאריכים מכל פורמט אפשרי ומונעת קריסות"""
-        if not d:
-            return None
-        if hasattr(d, 'date'):
-            return d.date()
+        # Smart date parser to prevent crashes
+        if not d: return None
+        if hasattr(d, 'date'): return d.date()
         if isinstance(d, str):
-            # מנקה רווחים אם יש
             d = d.strip()
-            # מנסה כמה תבניות שונות של תאריכים
             for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S"):
                 try:
-                    # מנסה לחלץ רק את 10 התווים הראשונים אם הפורמט קצר
                     test_str = d[:10] if len(fmt) <= 10 else d
                     return datetime.strptime(test_str, fmt).date()
                 except ValueError:
@@ -84,16 +79,12 @@ class SemesterSchedule:
         }
 
     def load_from_file(self):
-        if not os.path.exists(self.data_file):
-            return False
+        if not os.path.exists(self.data_file): return False
         try:
             with open(self.data_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                
-                # שימוש בפונקציה החכמה לחילוץ התאריכים (מונע קריסה גם אם הקובץ הישן נשמר בפורמט שונה)
                 self.semester_start = self._safe_parse_date(data.get("semester_start"))
                 self.semester_end = self._safe_parse_date(data.get("semester_end"))
-                
                 self.language = data.get("language", "he")
                 self.show_weekend = data.get("show_weekend", False)
                 self.enable_meeting_numbers = data.get("enable_meeting_numbers", True)
@@ -110,7 +101,7 @@ class SemesterSchedule:
     def save_to_file(self):
         try:
             with open(self.data_file, 'w', encoding='utf-8') as f:
-                json.update(self.to_dict(), f, ensure_ascii=False, indent=4)
-        except:
-            with open(self.data_file, 'w', encoding='utf-8') as f:
-                f.write(json.dumps(self.to_dict(), ensure_ascii=False, indent=4))
+                # FIX: Use json.dump instead of json.update
+                json.dump(self.to_dict(), f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(f"Failed to save: {e}")

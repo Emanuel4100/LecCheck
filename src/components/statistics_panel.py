@@ -4,40 +4,75 @@ from utils.i18n import t
 
 class StatisticsPanel(ft.Column):
     def __init__(self, schedule):
-        super().__init__(expand=True, horizontal_alignment="center")
+        super().__init__(expand=True, scroll=ft.ScrollMode.AUTO)
         self.schedule = schedule
-        self.build_view()
+        self.build_ui()
 
-    def build_view(self):
-        all_lectures = self.schedule.get_all_lectures_flat()
+    def build_ui(self):
+        self.controls.clear()
         
-        if not all_lectures:
-            self.controls.append(ft.Container(content=ft.Text(t("stats.no_data"), size=16, color="grey"), alignment=ft.Alignment(0, 0), padding=50))
-            return
+        lectures = self.schedule.get_all_lectures()
+        
+        total = len(lectures)
+        attended = sum(1 for l in lectures if l.status == LectureStatus.ATTENDED)
+        watched = sum(1 for l in lectures if l.status == LectureStatus.WATCHED_RECORDING)
+        pending = sum(1 for l in lectures if l.status == LectureStatus.NEEDS_WATCHING)
+        skipped = sum(1 for l in lectures if l.status == LectureStatus.SKIPPED)
 
-        attended = sum(1 for lec in all_lectures if lec.status in [LectureStatus.ATTENDED, LectureStatus.WATCHED_RECORDING])
-        skipped = sum(1 for lec in all_lectures if lec.status == LectureStatus.SKIPPED)
-        needs_watching = sum(1 for lec in all_lectures if lec.status == LectureStatus.NEEDS_WATCHING)
-        cancelled = sum(1 for lec in all_lectures if lec.status == LectureStatus.CANCELLED)
-        total = len(all_lectures)
-        
-        bar_controls = []
-        if attended > 0: bar_controls.append(ft.Container(content=ft.Text(f"{int((attended/total)*100)}%", color="white", weight="bold"), alignment=ft.Alignment(0, 0), expand=attended, bgcolor="#4CAF50"))
-        if skipped > 0: bar_controls.append(ft.Container(content=ft.Text(f"{int((skipped/total)*100)}%", color="white", weight="bold"), alignment=ft.Alignment(0, 0), expand=skipped, bgcolor="#757575"))
-        if needs_watching > 0: bar_controls.append(ft.Container(content=ft.Text(f"{int((needs_watching/total)*100)}%", color="black", weight="bold"), alignment=ft.Alignment(0, 0), expand=needs_watching, bgcolor="#E0E0E0"))
-        if cancelled > 0: bar_controls.append(ft.Container(content=ft.Text(f"{int((cancelled/total)*100)}%", color="white", weight="bold"), alignment=ft.Alignment(0, 0), expand=cancelled, bgcolor="#F44336"))
+        total_mins_all = 0
+        total_mins_completed = 0
 
-        stat_bar = ft.Container(content=ft.Row(bar_controls, spacing=0), height=40, border_radius=8, margin=ft.margin.symmetric(vertical=20))
-        
-        legend = ft.Column([
-            ft.Row([ft.Container(width=15, height=15, bgcolor="#4CAF50", border_radius=10), ft.Text(t("stats.attended", count=attended), size=16)]),
-            ft.Row([ft.Container(width=15, height=15, bgcolor="#757575", border_radius=10), ft.Text(t("stats.skipped", count=skipped), size=16)]),
-            ft.Row([ft.Container(width=15, height=15, bgcolor="#E0E0E0", border_radius=10), ft.Text(t("stats.needs_watching", count=needs_watching), size=16)]),
-            ft.Row([ft.Container(width=15, height=15, bgcolor="#F44336", border_radius=10), ft.Text(t("stats.cancelled", count=cancelled), size=16)])
-        ], alignment="center")
-        
-        self.controls.extend([
-            ft.Text(t("stats.title"), size=22, weight="bold", color="#1976D2", text_align="center"),
-            ft.Text(t("stats.total_lectures", total=total), size=14, color="grey", text_align="center"),
-            stat_bar, legend
-        ])
+        # חישוב מדויק של זמן כולל וזמן שהושלם
+        for l in lectures:
+            lec_mins = 0
+            if l.duration_mins:
+                lec_mins = l.duration_mins
+            elif l.start_time and l.end_time:
+                try:
+                    h1, m1 = map(int, l.start_time.split(':'))
+                    h2, m2 = map(int, l.end_time.split(':'))
+                    lec_mins = (h2 * 60 + m2) - (h1 * 60 + m1)
+                except Exception:
+                    pass
+            
+            total_mins_all += lec_mins
+            if l.status in [LectureStatus.ATTENDED, LectureStatus.WATCHED_RECORDING]:
+                total_mins_completed += lec_mins
+
+        def format_time(mins):
+            hours = mins // 60
+            m = mins % 60
+            if hours > 0: return f"{hours}h {m}m"
+            return f"{m}m" if mins > 0 else "0m"
+
+        self.controls = [
+            ft.Container(
+                content=ft.Text(t("stats.title", default="סטטיסטיקות"), size=20, weight="bold", color="primary"),
+                padding=ft.padding.only(bottom=10)
+            ),
+            self._build_stat_card(t("status.attended"), str(attended), "check_circle", "green"),
+            self._build_stat_card(t("status.watched"), str(watched), "smart_display", "blue"),
+            self._build_stat_card(t("status.needs_watching"), str(pending), "pending", "orange"),
+            self._build_stat_card(t("status.skipped"), str(skipped), "cancel", "red"),
+            ft.Divider(color="outlineVariant"),
+            self._build_stat_card(t("stats.time_completed", default="זמן שהושלם"), format_time(total_mins_completed), "task_alt", "green"),
+            self._build_stat_card(t("stats.total_time", default="זמן כולל"), format_time(total_mins_all), "access_time", "primary"),
+            self._build_stat_card(t("stats.total_meetings", default="סך הכל מפגשים"), str(total), "calendar_month", "onSurfaceVariant")
+        ]
+
+    def _build_stat_card(self, title, value, icon_name, color):
+        # שימוש ב-ft.Icon במקום קובץ SVG כדי למנוע לעולם "שבירת" אייקונים!
+        return ft.Container(
+            content=ft.Row([
+                ft.Row([
+                    ft.Icon(name=icon_name, size=24, color=color),
+                    ft.Text(title, size=15, weight="w500", color="onSurface")
+                ], spacing=10),
+                ft.Text(value, size=18, weight="bold", color="onSurface")
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            padding=15,
+            bgcolor="surface",
+            border_radius=12,
+            border=ft.border.all(1, "outlineVariant"),
+            margin=ft.margin.only(bottom=10)
+        )

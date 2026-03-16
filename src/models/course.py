@@ -23,11 +23,8 @@ class Course:
 
     def add_weekly_meeting(self, semester_start, semester_end, day_name, start_time, end_time, location, meeting_type="meeting_types.lecture"):
         meeting_rule = {
-            "day_name": day_name,
-            "start_time": start_time,
-            "end_time": end_time,
-            "location": location,
-            "meeting_type": meeting_type
+            "day_name": day_name, "start_time": start_time, "end_time": end_time,
+            "location": location, "meeting_type": meeting_type
         }
         self.meetings.append(meeting_rule)
         self.recalculate_all_lectures(semester_start, semester_end)
@@ -44,15 +41,10 @@ class Course:
                 status = LectureStatus.NEEDS_WATCHING
                 ext_link = ""
                 
-                # Restore previous status and links if they existed
-                if preserved_statuses:
-                    key = (date_str, rule["start_time"])
-                    if key in preserved_statuses:
-                        status = preserved_statuses[key]
-                if preserved_links:
-                    key = (date_str, rule["start_time"])
-                    if key in preserved_links:
-                        ext_link = preserved_links[key]
+                if preserved_statuses and (date_str, rule["start_time"]) in preserved_statuses:
+                    status = preserved_statuses[(date_str, rule["start_time"])]
+                if preserved_links and (date_str, rule["start_time"]) in preserved_links:
+                    ext_link = preserved_links[(date_str, rule["start_time"])]
 
                 new_id = str(time.time()) + str(current_date) + rule["start_time"]
                 m_type = rule.get('meeting_type', 'meeting_types.lecture')
@@ -61,7 +53,6 @@ class Course:
                 elif m_type == "מעבדה": m_type = "meeting_types.lab"
                 
                 session_title = f"{self.title} - {t(m_type)}"
-                
                 new_lec = LectureSession(
                     session_id=new_id, title=session_title, lecturer=self.lecturer,
                     date_obj=current_date, start_time=rule["start_time"], end_time=rule["end_time"],
@@ -70,7 +61,6 @@ class Course:
                 new_lec.course_color = self.color
                 new_lec.external_link = ext_link
                 
-                # Calculate duration in minutes for standard lectures
                 try:
                     h1, m1 = map(int, rule["start_time"].split(':'))
                     h2, m2 = map(int, rule["end_time"].split(':'))
@@ -85,7 +75,6 @@ class Course:
         preserved_statuses = {}
         preserved_links = {}
         
-        # Keep custom one-off events
         one_off_lectures = [l for l in self.lectures if l.is_one_off]
         
         for lec in self.lectures:
@@ -93,13 +82,14 @@ class Course:
                 preserved_statuses[(lec.date_str, lec.start_time)] = lec.status
                 preserved_links[(lec.date_str, lec.start_time)] = lec.external_link
                 
-        self.lectures = one_off_lectures
+        # FIX: Create a proper copy of the list to avoid reference bugs
+        self.lectures = list(one_off_lectures)
+        
         for rule in self.meetings:
             self._generate_lectures_for_rule(new_start, new_end, rule, preserved_statuses, preserved_links)
             
         self.lectures.sort(key=lambda l: (l.date_obj, l.start_time if l.start_time else "00:00"))
         
-        # Auto-numbering logic
         if enable_numbers:
             counters = {}
             for lec in self.lectures:
