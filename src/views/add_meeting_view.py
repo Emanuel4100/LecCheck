@@ -9,7 +9,7 @@ class AddMeetingView(ft.Column):
         self.change_screen = change_screen_func
 
         course_options = [ft.dropdown.Option(key=c.course_id, text=c.title) for c in self.schedule.courses]
-        self.course_dropdown = ft.Dropdown(label=t("meeting_form.course"), options=course_options, col={"xs": 12, "sm": 6})
+        self.course_dropdown = ft.Dropdown(label=t("meeting_form.course", default="בחר קורס"), options=course_options, col={"xs": 12, "sm": 6})
         
         self.type_dropdown = ft.Dropdown(label=t("course_form.type"), options=[ft.dropdown.Option(key="meeting_types.lecture", text=t("meeting_types.lecture")), ft.dropdown.Option(key="meeting_types.practice", text=t("meeting_types.practice")), ft.dropdown.Option(key="meeting_types.lab", text=t("meeting_types.lab"))], value="meeting_types.lecture", col={"xs": 6, "sm": 4})
         self.day_dropdown = ft.Dropdown(label=t("course_form.day"), options=[ft.dropdown.Option(key=f"days.{d}", text=t(f"days.{d}")) for d in ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]], col={"xs": 6, "sm": 4})
@@ -24,7 +24,7 @@ class AddMeetingView(ft.Column):
         header = ft.Container(
             content=ft.Row([
                 ft.TextButton(content=ft.Row([ft.Icon("arrow_forward", size=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
-                ft.Text(t("meeting_form.title"), size=20, weight="bold", color="onPrimary")
+                ft.Text(t("meeting_form.title", default="הוספת מפגש"), size=20, weight="bold", color="onPrimary")
             ]),
             bgcolor="primary", padding=5, border_radius=10
         )
@@ -34,13 +34,13 @@ class AddMeetingView(ft.Column):
             ft.Container(
                 padding=20,
                 content=ft.Column([
-                    ft.Text(t("meeting_form.details"), weight="bold", size=16, color="onSurface"),
+                    ft.Text(t("meeting_form.details", default="פרטים"), weight="bold", size=16, color="onSurface"),
                     ft.ResponsiveRow([self.course_dropdown]),
                     ft.Divider(color="outlineVariant"),
                     ft.Text(t("course_form.add_times"), weight="bold", size=16, color="onSurface"),
                     ft.ResponsiveRow([self.type_dropdown, self.day_dropdown, self.start_dropdown, self.end_dropdown, self.location_input]),
                     ft.Divider(color="outlineVariant", height=30),
-                    ft.ElevatedButton(content=ft.Row([ft.Icon("save", size=20, color="onPrimary"), ft.Text(t("meeting_form.save_btn"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor="primary", color="onPrimary"), on_click=self.save_meeting, height=45)
+                    ft.ElevatedButton(content=ft.Row([ft.Icon("save", size=20, color="onPrimary"), ft.Text(t("meeting_form.save_btn", default="שמור"))], alignment=ft.MainAxisAlignment.CENTER), style=ft.ButtonStyle(bgcolor="primary", color="onPrimary"), on_click=self.save_meeting, height=45)
                 ], spacing=15)
             )
         ]
@@ -65,6 +65,6 @@ class AddMeetingView(ft.Column):
         if course:
             course.add_weekly_meeting(self.schedule.semester_start, self.schedule.semester_end, self.day_dropdown.value, self.start_dropdown.value, self.end_dropdown.value, self.location_input.value, self.type_dropdown.value)
             self.schedule.save_to_file()
-            self.app_page.overlay.append(ft.SnackBar(ft.Text(t("meeting_form.success_msg", title=course.title)), open=True))
+            self.app_page.overlay.append(ft.SnackBar(ft.Text(t("meeting_form.success_msg", default="נשמר בהצלחה", title=course.title)), open=True))
             self.app_page.update()
             self.change_screen("schedule")

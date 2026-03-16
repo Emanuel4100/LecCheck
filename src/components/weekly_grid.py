@@ -23,6 +23,8 @@ class WeeklyGrid(ft.Column):
         self.update()
 
     def time_to_minutes(self, t_str):
+        # תיקון קריטי: אם מדובר במשימה שאין לה זמן (למשל משימה חד פעמית), מחזיר 0 ולא קורס!
+        if not t_str: return 0 
         h, m = map(int, t_str.split(':'))
         return h * 60 + m
 
@@ -65,12 +67,14 @@ class WeeklyGrid(ft.Column):
             if self.schedule.semester_end and current_day_date == self.schedule.semester_end:
                 header_elements.append(ft.Container(content=ft.Row([ft.Icon("flag", size=12, color="onError"), ft.Text(t("schedule.end_of_sem"), color="onError", weight="bold", size=10)], spacing=2), bgcolor="error", padding=4, border_radius=5))
             
-            col_header = ft.Container(content=ft.Column(header_elements, alignment="center", horizontal_alignment="center", spacing=2), alignment=ft.Alignment(0, 0), padding=5, bgcolor="secondaryContainer", border_radius=8, height=65)
+            col_header = ft.Container(content=ft.Column(header_elements, alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2), alignment=ft.Alignment(0, 0), padding=5, bgcolor="secondaryContainer", border_radius=8, height=65)
             
             day_stack = ft.Stack(height=TOTAL_HEIGHT)
             for h in range(START_HOUR, END_HOUR + 1): day_stack.controls.append(ft.Container(top=(h - START_HOUR) * 60 * SCALE, height=1, bgcolor="outlineVariant", left=0, right=0))
 
-            day_lecs = [l for l in lectures if l.date_obj == current_day_date]
+            # התיקון הקריטי: אנחנו מוסיפים ללוח השבועי רק הרצאות שיש להן שעת התחלה! שאר המשימות יופיעו בלשונית 'השלמות'
+            day_lecs = [l for l in lectures if l.date_obj == current_day_date and l.start_time and l.end_time]
+            
             for lec in day_lecs:
                 lec_start_m, lec_end_m = self.time_to_minutes(lec.start_time), self.time_to_minutes(lec.end_time)
                 is_overlapping = any(lec.session_id != other.session_id and max(lec_start_m, self.time_to_minutes(other.start_time)) < min(lec_end_m, self.time_to_minutes(other.end_time)) for other in day_lecs)
@@ -86,5 +90,5 @@ class WeeklyGrid(ft.Column):
             day_col = ft.Column([col_header, ft.Container(content=day_stack, expand=True)], spacing=10)
             day_columns.append(ft.Container(content=day_col, expand=True, padding=2))
 
-        grid_row = ft.Row(controls=day_columns + [ft.Container(content=time_column, width=30 if self.is_narrow_screen else 40)], vertical_alignment="start")
+        grid_row = ft.Row(controls=day_columns + [ft.Container(content=time_column, width=30 if self.is_narrow_screen else 40)], vertical_alignment=ft.CrossAxisAlignment.START)
         self.controls = [nav_row, ft.Container(content=ft.Column([grid_row], scroll=ft.ScrollMode.AUTO, expand=True), expand=True)]
