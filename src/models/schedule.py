@@ -18,7 +18,6 @@ class SemesterSchedule:
         return self.semester_start is not None and self.semester_end is not None
 
     def _safe_parse_date(self, d):
-        # Smart date parser to prevent crashes
         if not d: return None
         if hasattr(d, 'date'): return d.date()
         if isinstance(d, str):
@@ -42,7 +41,8 @@ class SemesterSchedule:
         all_lecs = []
         for c in self.courses:
             all_lecs.extend(c.lectures)
-        all_lecs.sort(key=lambda l: (l.date_obj, l.start_time if l.start_time else "00:00"))
+        # מיון בטוח
+        all_lecs.sort(key=lambda l: (l.date_obj if l.date_obj else datetime.min.date(), l.start_time if l.start_time else "00:00"))
         return all_lecs
 
     def get_weekly_lectures(self, target_date):
@@ -52,21 +52,22 @@ class SemesterSchedule:
         
         weekly = []
         for lec in self.get_all_lectures():
-            if sun <= lec.date_obj <= end_day:
+            if lec.date_obj and sun <= lec.date_obj <= end_day:
                 weekly.append(lec)
         return weekly
 
     def get_pending_lectures(self):
         today = datetime.now().date()
-        return [l for l in self.get_all_lectures() if l.status == "status.needs_watching" and l.date_obj <= today]
+        # חובה לבדוק ש-date_obj קיים לפני ההשוואה
+        return [l for l in self.get_all_lectures() if l.status == "status.needs_watching" and l.date_obj and l.date_obj <= today]
 
     def get_past_lectures(self):
         today = datetime.now().date()
-        return [l for l in self.get_all_lectures() if l.date_obj < today and l.status != "status.needs_watching"]
+        return [l for l in self.get_all_lectures() if l.date_obj and l.date_obj < today and l.status != "status.needs_watching"]
 
     def get_future_lectures(self):
         today = datetime.now().date()
-        return [l for l in self.get_all_lectures() if l.date_obj > today]
+        return [l for l in self.get_all_lectures() if l.date_obj and l.date_obj > today]
 
     def to_dict(self):
         return {
@@ -101,7 +102,6 @@ class SemesterSchedule:
     def save_to_file(self):
         try:
             with open(self.data_file, 'w', encoding='utf-8') as f:
-                # FIX: Use json.dump instead of json.update
                 json.dump(self.to_dict(), f, ensure_ascii=False, indent=4)
         except Exception as e:
             print(f"Failed to save: {e}")

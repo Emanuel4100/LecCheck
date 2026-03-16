@@ -36,7 +36,9 @@ class ScheduleView(ft.Column):
             height=65
         )
 
-        self.content_area = ft.Container()
+        # התיקון הקריטי: חובה להגדיר expand=True כדי שהתוכן המרכזי לא יתכווץ ל-0 פיקסלים בתוך ה-Stack!
+        self.content_area = ft.Container(expand=True)
+        
         self.build_tabs()
         self.update_content()
 
@@ -51,7 +53,6 @@ class ScheduleView(ft.Column):
 
         add_btn = ft.FloatingActionButton(content=ft.Icon("add", size=24, color="onPrimaryContainer"), bgcolor="primaryContainer", shape=ft.RoundedRectangleBorder(radius=16), on_click=self.open_add_menu)
         
-        # התיקון העיצובי הקריטי: עיגון של התוכן לארבעת הקצוות בתוך ה-Stack כדי שלא יעלם
         self.controls = [
             self.header,
             self.tabs_row,
@@ -90,10 +91,10 @@ class ScheduleView(ft.Column):
 
         if self.selected_tab == t("schedule.tab_lectures"):
             options_content = ft.Column([
-                ft.Text(t("schedule.add_task", default="משימה חדשה"), size=18, weight="bold", color="onSurface"),
+                ft.Text(t("schedule.add_task"), size=18, weight="bold", color="onSurface"),
                 ft.Divider(color="outlineVariant"),
-                ft.ListTile(leading=ft.Icon("video_camera_front", color="primary"), title=ft.Text(t("schedule.add_recording", default="הקלטה להשלמה"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
-                ft.ListTile(leading=ft.Icon("event", color="tertiary"), title=ft.Text(t("schedule.add_custom_event", default="אירוע חריג"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
+                ft.ListTile(leading=ft.Icon("video_camera_front", color="primary"), title=ft.Text(t("schedule.add_recording"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
+                ft.ListTile(leading=ft.Icon("event", color="tertiary"), title=ft.Text(t("schedule.add_custom_event"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
             ], tight=True)
         else:
             options_content = ft.Column([
@@ -108,16 +109,16 @@ class ScheduleView(ft.Column):
 
     def open_oneoff_event_dialog(self):
         course_options = [ft.dropdown.Option(key=c.course_id, text=c.title) for c in self.schedule.courses]
-        course_dropdown = ft.Dropdown(label=t("schedule.select_course", default="בחר קורס"), options=course_options, width=280)
-        title_input = ft.TextField(label=t("schedule.topic_title", default="נושא"), width=280)
-        duration_input = ft.TextField(label=t("schedule.duration_mins", default="אורך (דקות)"), keyboard_type=ft.KeyboardType.NUMBER, width=120)
+        course_dropdown = ft.Dropdown(label=t("schedule.select_course"), options=course_options, width=280)
+        title_input = ft.TextField(label=t("schedule.topic_title"), width=280)
+        duration_input = ft.TextField(label=t("schedule.duration_mins"), keyboard_type=ft.KeyboardType.NUMBER, width=120)
         
-        type_dropdown = ft.Dropdown(label=t("schedule.meeting_type", default="סוג"), width=150, options=[
+        type_dropdown = ft.Dropdown(label=t("schedule.meeting_type"), width=150, options=[
             ft.dropdown.Option("meeting_types.lecture", t("meeting_types.lecture")),
             ft.dropdown.Option("meeting_types.practice", t("meeting_types.practice")),
             ft.dropdown.Option("meeting_types.lab", t("meeting_types.lab")),
-            ft.dropdown.Option("meeting_types.recording", t("meeting_types.recording", default="הקלטה")),
-            ft.dropdown.Option("meeting_types.other", t("meeting_types.other", default="אחר"))
+            ft.dropdown.Option("meeting_types.recording", t("meeting_types.recording")),
+            ft.dropdown.Option("meeting_types.other", t("meeting_types.other"))
         ], value="meeting_types.other")
         
         def save_oneoff(e):
@@ -150,11 +151,11 @@ class ScheduleView(ft.Column):
             self.app_page.update()
 
         dlg = ft.AlertDialog(
-            title=ft.Text(t("schedule.add_task", default="משימה חדשה")),
+            title=ft.Text(t("schedule.add_task")),
             content=ft.Column([course_dropdown, title_input, ft.Row([duration_input, type_dropdown])], tight=True),
             actions=[
-                ft.TextButton(t("common.cancel", default="ביטול"), on_click=close_dialog),
-                ft.ElevatedButton(t("common.save", default="שמור"), on_click=save_oneoff, bgcolor="primary", color="onPrimary")
+                ft.TextButton(t("common.cancel"), on_click=close_dialog),
+                ft.ElevatedButton(t("common.save"), on_click=save_oneoff, bgcolor="primary", color="onPrimary")
             ]
         )
         self.app_page.overlay.append(dlg)
