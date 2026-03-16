@@ -24,7 +24,6 @@ class ScheduleView(ft.Column):
         
         self.app_page.on_resize = self.handle_resize
 
-        # התיקון לטאבים העליונים: בנינו אותם בתוך קונטיינר מרווח ויציב
         self.tabs_row_container = ft.Row(scroll=ft.ScrollMode.AUTO, alignment=ft.MainAxisAlignment.CENTER)
         self.tabs_container = ft.Container(
             content=self.tabs_row_container,
@@ -87,10 +86,20 @@ class ScheduleView(ft.Column):
 
     def open_add_menu(self, e):
         def close_and_go(screen_name):
-            bs.open = False; self.app_page.update(); self.change_screen(screen_name)
+            bs.open = False
+            # [תיקון] - ניקוי מה-overlay
+            if bs in self.app_page.overlay:
+                self.app_page.overlay.remove(bs)
+            self.app_page.update()
+            self.change_screen(screen_name)
             
         def close_and_open_oneoff():
-            bs.open = False; self.app_page.update(); self.open_oneoff_event_dialog()
+            bs.open = False
+            # [תיקון] - ניקוי מה-overlay
+            if bs in self.app_page.overlay:
+                self.app_page.overlay.remove(bs)
+            self.app_page.update()
+            self.open_oneoff_event_dialog()
 
         if self.selected_tab == t("schedule.tab_lectures"):
             options_content = ft.Column([
@@ -115,7 +124,6 @@ class ScheduleView(ft.Column):
         course_dropdown = ft.Dropdown(label=t("schedule.select_course", default="בחר קורס"), options=course_options)
         title_input = ft.TextField(label=t("schedule.topic_title", default="נושא"))
         
-        # התיקון לרוחב השדות בטופס: הגדרת expand שווה לכל שדה כדי שיסתדרו יפה בתוך השורה!
         duration_input = ft.TextField(label=t("schedule.duration_mins", default="אורך (דק')"), keyboard_type=ft.KeyboardType.NUMBER, expand=1)
         type_dropdown = ft.Dropdown(label=t("schedule.meeting_type", default="סוג"), expand=1, options=[
             ft.dropdown.Option("meeting_types.lecture", t("meeting_types.lecture")),
@@ -148,13 +156,18 @@ class ScheduleView(ft.Column):
                 self.schedule.save_to_file()
                 self.refresh_ui()
                 dlg.open = False
+                # [תיקון] - הסרה מזיכרון ה-overlay
+                if dlg in self.app_page.overlay:
+                    self.app_page.overlay.remove(dlg)
                 self.app_page.update()
                 
         def close_dialog(e):
             dlg.open = False
+            # [תיקון] - הסרה מזיכרון ה-overlay
+            if dlg in self.app_page.overlay:
+                self.app_page.overlay.remove(dlg)
             self.app_page.update()
 
-        # הוספתי רוחב קבוע לטופס כדי שלא יימחץ שוב
         dlg = ft.AlertDialog(
             title=ft.Text(t("schedule.add_task", default="משימה חדשה")),
             content=ft.Container(
@@ -177,7 +190,6 @@ class ScheduleView(ft.Column):
     def build_tabs(self):
         self.tabs_row_container.controls.clear()
         
-        # התיקון לטאבים - במקום TextButton בעייתי, השתמשתי ב-Container שפועל כמו צ'יפים של גוגל
         for tab in self.tabs:
             is_selected = (tab == self.selected_tab)
             btn = ft.Container(

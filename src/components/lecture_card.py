@@ -137,11 +137,17 @@ class LectureCard(ft.Container):
             if dur_input.value.isdigit():
                 self.lecture.duration_mins = int(dur_input.value)
             self.current_dialog.open = False
+            # [תיקון] - הסרה מהזיכרון
+            if self.current_dialog in e.page.overlay:
+                e.page.overlay.remove(self.current_dialog)
             e.page.update()
             if self.update_callback: self.update_callback()
             
         def close_dialog(args):
             self.current_dialog.open = False
+            # [תיקון] - הסרה מהזיכרון
+            if self.current_dialog in e.page.overlay:
+                e.page.overlay.remove(self.current_dialog)
             e.page.update()
 
         self.current_dialog = ft.AlertDialog(
@@ -172,10 +178,15 @@ class LectureCard(ft.Container):
         for icon_name, status_value, text_label, active_color in options:
             is_active = (self.lecture.status == status_value)
             def make_click_handler(stat_val):
-                def on_click(e):
+                def on_click(ev):
                     self.lecture.status = stat_val
                     if self.update_callback: self.update_callback()
-                    if self.current_dialog: self.current_dialog.open = False; e.page.update()
+                    if self.current_dialog: 
+                        self.current_dialog.open = False
+                        # [תיקון] - הסרה מהזיכרון
+                        if self.current_dialog in ev.page.overlay:
+                            ev.page.overlay.remove(self.current_dialog)
+                        ev.page.update()
                 return on_click
 
             btn = ft.Container(
@@ -195,7 +206,11 @@ class LectureCard(ft.Container):
 
     def open_popup(self, e):
         def close_dlg(args):
-            self.current_dialog.open = False; e.page.update()
+            self.current_dialog.open = False
+            # [תיקון] - הסרה מהזיכרון
+            if self.current_dialog in e.page.overlay:
+                e.page.overlay.remove(self.current_dialog)
+            e.page.update()
 
         self.current_dialog = ft.AlertDialog(
             content=ft.Container(content=self.build_popup_content(), width=320, padding=10),

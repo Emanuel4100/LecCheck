@@ -5,14 +5,21 @@ from models.course import Course
 from utils.i18n import translator
 
 class SemesterSchedule:
-    def __init__(self):
+    def __init__(self, page=None):
+        self.page = page
         self.courses = []
         self.semester_start = None
         self.semester_end = None
         self.language = "he"
         self.show_weekend = False
-        self.data_file = "my_schedule_data.json"
         self.enable_meeting_numbers = True
+        
+        # זיהוי אוטומטי של תיקייה בטוחה לכתיבה (מובייל) או שימוש בתיקייה נוכחית (מחשב)
+        app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
+        if app_data_path:
+            self.data_file = os.path.join(app_data_path, "schedule_data.json")
+        else:
+            self.data_file = "schedule_data.json"
 
     def is_semester_set(self):
         return self.semester_start is not None and self.semester_end is not None
@@ -41,7 +48,6 @@ class SemesterSchedule:
         all_lecs = []
         for c in self.courses:
             all_lecs.extend(c.lectures)
-        # מיון בטוח
         all_lecs.sort(key=lambda l: (l.date_obj if l.date_obj else datetime.min.date(), l.start_time if l.start_time else "00:00"))
         return all_lecs
 
@@ -58,7 +64,6 @@ class SemesterSchedule:
 
     def get_pending_lectures(self):
         today = datetime.now().date()
-        # חובה לבדוק ש-date_obj קיים לפני ההשוואה
         return [l for l in self.get_all_lectures() if l.status == "status.needs_watching" and l.date_obj and l.date_obj <= today]
 
     def get_past_lectures(self):
@@ -80,20 +85,22 @@ class SemesterSchedule:
         }
 
     def load_from_file(self):
-        if not os.path.exists(self.data_file): return False
+        if not os.path.exists(self.data_file):
+            return False
         try:
             with open(self.data_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                self.semester_start = self._safe_parse_date(data.get("semester_start"))
-                self.semester_end = self._safe_parse_date(data.get("semester_end"))
-                self.language = data.get("language", "he")
-                self.show_weekend = data.get("show_weekend", False)
-                self.enable_meeting_numbers = data.get("enable_meeting_numbers", True)
-                translator.set_language(self.language)
                 
-                self.courses = []
-                for c_data in data.get("courses", []):
-                    self.courses.append(Course.from_dict(c_data))
+            self.semester_start = self._safe_parse_date(data.get("semester_start"))
+            self.semester_end = self._safe_parse_date(data.get("semester_end"))
+            self.language = data.get("language", "he")
+            self.show_weekend = data.get("show_weekend", False)
+            self.enable_meeting_numbers = data.get("enable_meeting_numbers", True)
+            translator.set_language(self.language)
+            
+            self.courses = []
+            for c_data in data.get("courses", []):
+                self.courses.append(Course.from_dict(c_data))
             return True
         except Exception as e:
             print(f"Error loading data: {e}")

@@ -23,7 +23,6 @@ class WeeklyGrid(ft.Column):
         self.update()
 
     def time_to_minutes(self, t_str):
-        # תיקון קריטי: אם מדובר במשימה שאין לה זמן (למשל משימה חד פעמית), מחזיר 0 ולא קורס!
         if not t_str: return 0 
         h, m = map(int, t_str.split(':'))
         return h * 60 + m
@@ -72,7 +71,6 @@ class WeeklyGrid(ft.Column):
             day_stack = ft.Stack(height=TOTAL_HEIGHT)
             for h in range(START_HOUR, END_HOUR + 1): day_stack.controls.append(ft.Container(top=(h - START_HOUR) * 60 * SCALE, height=1, bgcolor="outlineVariant", left=0, right=0))
 
-            # התיקון הקריטי: אנחנו מוסיפים ללוח השבועי רק הרצאות שיש להן שעת התחלה! שאר המשימות יופיעו בלשונית 'השלמות'
             day_lecs = [l for l in lectures if l.date_obj == current_day_date and l.start_time and l.end_time]
             
             for lec in day_lecs:
@@ -88,7 +86,17 @@ class WeeklyGrid(ft.Column):
                 day_stack.controls.append(ft.Container(top=top_pos, height=height, left=0, right=0, content=card, opacity=0.9 if is_overlapping else 1.0))
 
             day_col = ft.Column([col_header, ft.Container(content=day_stack, expand=True)], spacing=10)
-            day_columns.append(ft.Container(content=day_col, expand=True, padding=2))
+            
+            # [תיקון] - רוחב קבוע למסך צר כדי לאפשר גלילה חופשית מבלי למעוך את העמודות
+            if self.is_narrow_screen:
+                day_columns.append(ft.Container(content=day_col, width=130, padding=2))
+            else:
+                day_columns.append(ft.Container(content=day_col, expand=True, padding=2))
 
-        grid_row = ft.Row(controls=day_columns + [ft.Container(content=time_column, width=30 if self.is_narrow_screen else 40)], vertical_alignment=ft.CrossAxisAlignment.START)
+        # [תיקון] - הוספת scroll mode למסך צר 
+        grid_row = ft.Row(
+            controls=day_columns + [ft.Container(content=time_column, width=30 if self.is_narrow_screen else 40)], 
+            vertical_alignment=ft.CrossAxisAlignment.START,
+            scroll=ft.ScrollMode.AUTO if self.is_narrow_screen else None
+        )
         self.controls = [nav_row, ft.Container(content=ft.Column([grid_row], scroll=ft.ScrollMode.AUTO, expand=True), expand=True)]

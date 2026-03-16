@@ -37,10 +37,14 @@ def main(page: ft.Page):
     )
     page.rtl = True
     
-    my_schedule = SemesterSchedule()
+    # [תיקון] - מעבירים את ה-page למודל כדי שידע לשמור ל-client_storage במובייל
+    my_schedule = SemesterSchedule(page)
     
     def change_screen(screen_name):
+        # [תיקון] - חובה לנקות מאזינים גלובליים לפני החלפת מסך כדי למנוע קריסות (Memory Leaks)
+        page.on_resize = None 
         page.controls.clear()
+        
         if screen_name == "onboarding":
             page.controls.append(OnboardingView(page, my_schedule, change_screen))
         elif screen_name == "schedule":

@@ -47,11 +47,16 @@ class SettingsView(ft.Column):
                     else: self.schedule.semester_end = parsed_date
                     self.update_date_texts()
                     self.recalc_all()
+                
+                if picker in self.app_page.overlay:
+                    self.app_page.overlay.remove(picker)
+                self.app_page.update()
 
             picker = ft.DatePicker(
                 first_date=datetime(2020, 1, 1),
                 last_date=datetime(2030, 12, 31),
-                on_change=handle_change
+                on_change=handle_change,
+                on_dismiss=lambda ev: self.app_page.overlay.remove(picker) if picker in self.app_page.overlay else None
             )
             self.app_page.overlay.append(picker)
             picker.open = True
@@ -64,11 +69,13 @@ class SettingsView(ft.Column):
         date_section = ft.Column([
             ft.Text(t("settings.dates"), weight="bold"),
             ft.Row([
-                ft.ElevatedButton(t("settings.change_start", default="שנה התחלה"), icon=ft.icons.CALENDAR_MONTH, on_click=lambda e: pick_date(e, True)),
+                # תיקון: שימוש בשם האייקון כמחרוזת במקום קבוע שעלול להשתנות
+                ft.ElevatedButton(t("settings.change_start", default="שנה התחלה"), icon="calendar_month", on_click=lambda e: pick_date(e, True)),
                 self.start_text
             ]),
             ft.Row([
-                ft.ElevatedButton(t("settings.change_end", default="שנה סיום"), icon=ft.icons.CALENDAR_MONTH, on_click=lambda e: pick_date(e, False)),
+                # תיקון: שימוש בשם האייקון כמחרוזת
+                ft.ElevatedButton(t("settings.change_end", default="שנה סיום"), icon="calendar_month", on_click=lambda e: pick_date(e, False)),
                 self.end_text
             ])
         ], spacing=10)
@@ -98,12 +105,13 @@ class SettingsView(ft.Column):
     def update_date_texts(self):
         if self.schedule.semester_start:
             self.start_text.value = self.schedule.semester_start.strftime("%d/%m/%Y")
+        else:
+            self.start_text.value = ""
+            
         if self.schedule.semester_end:
             self.end_text.value = self.schedule.semester_end.strftime("%d/%m/%Y")
-        
-        # התיקון הקריטי שמנע את קריסת האפליקציה!
-        if self.page:
-            self.update()
+        else:
+            self.end_text.value = ""
 
     def change_language(self, e):
         self.schedule.language = self.lang_dropdown.value
