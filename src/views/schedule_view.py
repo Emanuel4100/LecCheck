@@ -24,7 +24,13 @@ class ScheduleView(ft.Column):
         
         self.app_page.on_resize = self.handle_resize
 
-        self.tabs_row = ft.Row(scroll=ft.ScrollMode.AUTO, alignment=ft.MainAxisAlignment.CENTER, visible=not self.is_narrow_screen)
+        # התיקון לטאבים העליונים: בנינו אותם בתוך קונטיינר מרווח ויציב
+        self.tabs_row_container = ft.Row(scroll=ft.ScrollMode.AUTO, alignment=ft.MainAxisAlignment.CENTER)
+        self.tabs_container = ft.Container(
+            content=self.tabs_row_container,
+            visible=not self.is_narrow_screen,
+            padding=ft.padding.symmetric(vertical=15)
+        )
         
         self.bottom_nav_row = ft.Row(alignment=ft.MainAxisAlignment.SPACE_AROUND)
         self.bottom_nav = ft.Container(
@@ -32,13 +38,10 @@ class ScheduleView(ft.Column):
             visible=self.is_narrow_screen,
             bgcolor="surface",
             border=ft.border.only(top=ft.border.BorderSide(1, "outlineVariant")),
-            padding=ft.padding.only(top=5, bottom=5),
-            height=65
+            padding=ft.padding.symmetric(vertical=8)
         )
 
-        # התיקון הקריטי: חובה להגדיר expand=True כדי שהתוכן המרכזי לא יתכווץ ל-0 פיקסלים בתוך ה-Stack!
         self.content_area = ft.Container(expand=True)
-        
         self.build_tabs()
         self.update_content()
 
@@ -55,7 +58,7 @@ class ScheduleView(ft.Column):
         
         self.controls = [
             self.header,
-            self.tabs_row,
+            self.tabs_container,
             ft.Stack([
                 ft.Container(content=self.content_area, top=0, bottom=0, left=0, right=0),
                 ft.Container(content=add_btn, bottom=20, left=20) 
@@ -75,7 +78,7 @@ class ScheduleView(ft.Column):
             if self.selected_tab not in self.tabs: self.selected_tab = self.tabs[0]
             
             self.weekly_grid_component.set_narrow_screen(new_is_narrow)
-            self.tabs_row.visible = not new_is_narrow
+            self.tabs_container.visible = not new_is_narrow
             self.bottom_nav.visible = new_is_narrow
             
             self.build_tabs()
@@ -91,10 +94,10 @@ class ScheduleView(ft.Column):
 
         if self.selected_tab == t("schedule.tab_lectures"):
             options_content = ft.Column([
-                ft.Text(t("schedule.add_task"), size=18, weight="bold", color="onSurface"),
+                ft.Text(t("schedule.add_task", default="משימה חדשה"), size=18, weight="bold", color="onSurface"),
                 ft.Divider(color="outlineVariant"),
-                ft.ListTile(leading=ft.Icon("video_camera_front", color="primary"), title=ft.Text(t("schedule.add_recording"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
-                ft.ListTile(leading=ft.Icon("event", color="tertiary"), title=ft.Text(t("schedule.add_custom_event"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
+                ft.ListTile(leading=ft.Icon("video_camera_front", color="primary"), title=ft.Text(t("schedule.add_recording", default="הקלטה להשלמה"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
+                ft.ListTile(leading=ft.Icon("event", color="tertiary"), title=ft.Text(t("schedule.add_custom_event", default="אירוע חריג"), color="onSurface"), on_click=lambda _: close_and_open_oneoff()),
             ], tight=True)
         else:
             options_content = ft.Column([
@@ -109,16 +112,17 @@ class ScheduleView(ft.Column):
 
     def open_oneoff_event_dialog(self):
         course_options = [ft.dropdown.Option(key=c.course_id, text=c.title) for c in self.schedule.courses]
-        course_dropdown = ft.Dropdown(label=t("schedule.select_course"), options=course_options, width=280)
-        title_input = ft.TextField(label=t("schedule.topic_title"), width=280)
-        duration_input = ft.TextField(label=t("schedule.duration_mins"), keyboard_type=ft.KeyboardType.NUMBER, width=120)
+        course_dropdown = ft.Dropdown(label=t("schedule.select_course", default="בחר קורס"), options=course_options)
+        title_input = ft.TextField(label=t("schedule.topic_title", default="נושא"))
         
-        type_dropdown = ft.Dropdown(label=t("schedule.meeting_type"), width=150, options=[
+        # התיקון לרוחב השדות בטופס: הגדרת expand שווה לכל שדה כדי שיסתדרו יפה בתוך השורה!
+        duration_input = ft.TextField(label=t("schedule.duration_mins", default="אורך (דק')"), keyboard_type=ft.KeyboardType.NUMBER, expand=1)
+        type_dropdown = ft.Dropdown(label=t("schedule.meeting_type", default="סוג"), expand=1, options=[
             ft.dropdown.Option("meeting_types.lecture", t("meeting_types.lecture")),
             ft.dropdown.Option("meeting_types.practice", t("meeting_types.practice")),
             ft.dropdown.Option("meeting_types.lab", t("meeting_types.lab")),
-            ft.dropdown.Option("meeting_types.recording", t("meeting_types.recording")),
-            ft.dropdown.Option("meeting_types.other", t("meeting_types.other"))
+            ft.dropdown.Option("meeting_types.recording", t("meeting_types.recording", default="הקלטה")),
+            ft.dropdown.Option("meeting_types.other", t("meeting_types.other", default="אחר"))
         ], value="meeting_types.other")
         
         def save_oneoff(e):
@@ -150,12 +154,20 @@ class ScheduleView(ft.Column):
             dlg.open = False
             self.app_page.update()
 
+        # הוספתי רוחב קבוע לטופס כדי שלא יימחץ שוב
         dlg = ft.AlertDialog(
-            title=ft.Text(t("schedule.add_task")),
-            content=ft.Column([course_dropdown, title_input, ft.Row([duration_input, type_dropdown])], tight=True),
+            title=ft.Text(t("schedule.add_task", default="משימה חדשה")),
+            content=ft.Container(
+                width=320, 
+                content=ft.Column([
+                    course_dropdown, 
+                    title_input, 
+                    ft.Row([duration_input, type_dropdown], spacing=10)
+                ], tight=True)
+            ),
             actions=[
-                ft.TextButton(t("common.cancel"), on_click=close_dialog),
-                ft.ElevatedButton(t("common.save"), on_click=save_oneoff, bgcolor="primary", color="onPrimary")
+                ft.TextButton(t("common.cancel", default="ביטול"), on_click=close_dialog),
+                ft.ElevatedButton(t("common.save", default="שמור"), on_click=save_oneoff, bgcolor="primary", color="onPrimary")
             ]
         )
         self.app_page.overlay.append(dlg)
@@ -163,15 +175,20 @@ class ScheduleView(ft.Column):
         self.app_page.update()
 
     def build_tabs(self):
-        self.tabs_row.controls.clear()
+        self.tabs_row_container.controls.clear()
+        
+        # התיקון לטאבים - במקום TextButton בעייתי, השתמשתי ב-Container שפועל כמו צ'יפים של גוגל
         for tab in self.tabs:
             is_selected = (tab == self.selected_tab)
-            btn = ft.TextButton(
+            btn = ft.Container(
                 content=ft.Text(tab, color="onSecondaryContainer" if is_selected else "onSurfaceVariant", weight="bold" if is_selected else "normal"),
-                style=ft.ButtonStyle(bgcolor="secondaryContainer" if is_selected else "transparent", shape=ft.RoundedRectangleBorder(radius=20)),
-                on_click=self.create_tab_click_handler(tab)
+                bgcolor="secondaryContainer" if is_selected else "transparent",
+                padding=ft.padding.symmetric(horizontal=20, vertical=10),
+                border_radius=20,
+                on_click=self.create_tab_click_handler(tab),
+                ink=True
             )
-            self.tabs_row.controls.append(btn)
+            self.tabs_row_container.controls.append(btn)
 
         self.bottom_nav_row.controls.clear()
         nav_items = [
