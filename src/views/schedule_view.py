@@ -42,7 +42,6 @@ class ScheduleView(ft.Column):
 
         self.content_area = ft.Container(expand=True)
         self.build_tabs()
-        self.update_content()
 
         self.header = ft.Container(
             content=ft.Row([
@@ -50,20 +49,23 @@ class ScheduleView(ft.Column):
                 ft.Text(t("schedule.app_title"), size=22, weight="bold", color="onPrimary"),
                 ft.Container(width=48)
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            bgcolor="primary", padding=15, border_radius=ft.border_radius.only(bottom_left=15, bottom_right=15), shadow=ft.BoxShadow(blur_radius=5, color="shadow")
+            bgcolor="primary", padding=15, border_radius=ft.border_radius.only(bottom_left=15, bottom_right=15), shadow=ft.BoxShadow(blur_radius=5, color="shadow"),
+            visible=not self.is_narrow_screen 
         )
 
-        add_btn = ft.FloatingActionButton(content=ft.Image(src="icons/add.svg", width=24, height=24, color="onPrimaryContainer"), bgcolor="primaryContainer", shape=ft.RoundedRectangleBorder(radius=16), on_click=self.open_add_menu)
+        self.add_btn = ft.FloatingActionButton(content=ft.Image(src="icons/add.svg", width=24, height=24, color="onPrimaryContainer"), bgcolor="primaryContainer", shape=ft.RoundedRectangleBorder(radius=16), on_click=self.open_add_menu)
         
         self.controls = [
             self.header,
             self.tabs_container,
             ft.Stack([
                 ft.Container(content=self.content_area, top=0, bottom=0, left=0, right=0),
-                ft.Container(content=add_btn, bottom=20, left=20) 
+                ft.Container(content=self.add_btn, bottom=20, left=20) 
             ], expand=True),
             self.bottom_nav
         ]
+        
+        self.update_content()
 
     def get_tabs(self):
         if self.is_narrow_screen: return [t("schedule.tab_weekly"), t("schedule.tab_lectures"), t("schedule.tab_stats")]
@@ -78,6 +80,7 @@ class ScheduleView(ft.Column):
             
             self.weekly_grid_component.set_narrow_screen(new_is_narrow)
             self.tabs_container.visible = not new_is_narrow
+            self.header.visible = not new_is_narrow
             self.bottom_nav.visible = new_is_narrow
             
             self.build_tabs()
@@ -190,7 +193,8 @@ class ScheduleView(ft.Column):
         nav_items = [
             ("calendar_month", t("schedule.tab_weekly")),
             ("menu_book", t("schedule.tab_lectures")),
-            ("pie_chart", t("schedule.tab_stats"))
+            ("pie_chart", t("schedule.tab_stats")),
+            ("settings", t("schedule.settings")) 
         ]
         for icon_name, tab_name in nav_items:
             is_selected = (self.selected_tab == tab_name)
@@ -208,7 +212,11 @@ class ScheduleView(ft.Column):
 
     def create_tab_click_handler(self, tab):
         def on_click(e):
-            self.selected_tab = tab; self.build_tabs(); self.update_content(); self.update()
+            # התיקון: כעת לחיצה על הגדרות הופכת אותו לטאב רגיל במובייל
+            self.selected_tab = tab
+            self.build_tabs()
+            self.update_content()
+            self.update()
         return on_click
     
     def refresh_ui(self):
@@ -221,12 +229,18 @@ class ScheduleView(ft.Column):
     def update_content(self):
         main_view = None
         
+        # מסתירים את הפלוס בסטטיסטיקות וגם בהגדרות
+        self.add_btn.visible = (self.selected_tab not in [t("schedule.tab_stats"), t("schedule.settings")])
+        
         if self.selected_tab == t("schedule.tab_weekly"): 
             main_view = self.weekly_grid_component
         elif self.selected_tab == t("schedule.tab_stats"): 
             main_view = StatisticsPanel(self.schedule)
         elif self.selected_tab == t("schedule.tab_lectures"): 
             main_view = self.lectures_list_component
+        elif self.selected_tab == t("schedule.settings"): 
+            from views.settings_view import SettingsView # קריאה להגדרות כתת-מסך
+            main_view = SettingsView(self.app_page, self.schedule, self.change_screen, is_tab=True)
 
         if not self.is_narrow_screen and self.selected_tab == t("schedule.tab_lectures"):
             border_side = ft.border.only(

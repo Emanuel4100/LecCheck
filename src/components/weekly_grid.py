@@ -89,4 +89,9 @@ class WeeklyGrid(ft.Column):
             day_columns.append(ft.Container(content=day_col, expand=True, padding=2))
 
         grid_row = ft.Row(controls=day_columns + [ft.Container(content=time_column, width=30 if self.is_narrow_screen else 40)], vertical_alignment=ft.CrossAxisAlignment.START)
-        self.controls = [nav_row, ft.Container(content=ft.Column([grid_row], scroll=ft.ScrollMode.AUTO, expand=True), expand=True)]
+        
+
+        self.controls = [
+            nav_row, 
+            ft.ListView(controls=[grid_row], expand=True) 
+        ]

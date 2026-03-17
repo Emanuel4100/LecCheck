@@ -3,13 +3,12 @@ from datetime import datetime
 from utils.i18n import translator, t
 
 class SettingsView(ft.Column):
-    def __init__(self, page: ft.Page, schedule, change_screen_func):
-        super().__init__(expand=True)
+    def __init__(self, page: ft.Page, schedule, change_screen_func, is_tab=False):
+        super().__init__(expand=True, scroll=ft.ScrollMode.AUTO)
         self.app_page = page
         self.schedule = schedule
         self.change_screen = change_screen_func
 
-        # --- פתרון אלגנטי וחסין-תקלות לשפות: כפתורים במקום תפריט נפתח ---
         def set_language(lang):
             if self.schedule.language == lang: return
             self.schedule.language = lang
@@ -17,7 +16,7 @@ class SettingsView(ft.Column):
             self.app_page.rtl = (lang == "he")
             self.schedule.save_to_file()
             self.app_page.update()
-            self.change_screen("settings")
+            self.change_screen("schedule") # מרענן את כל האפליקציה!
 
         self.lang_he_btn = ft.ElevatedButton(
             content=ft.Text("עברית", weight="bold"),
@@ -41,7 +40,6 @@ class SettingsView(ft.Column):
             ft.Text(t("settings.language"), size=16, weight="bold"),
             ft.Row([self.lang_he_btn, self.lang_en_btn], spacing=10)
         ])
-        # -----------------------------------------------------------
 
         self.weekend_switch = ft.Switch(
             label=t("settings.show_weekend"),
@@ -102,19 +100,26 @@ class SettingsView(ft.Column):
             ])
         ], spacing=10)
 
+        # כותרת שולחן עבודה רגילה
         header = ft.Container(
             content=ft.Row([
                 ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),
                 ft.Text(t("schedule.settings"), size=20, weight="bold", color="onPrimary")
             ]),
-            bgcolor="primary", padding=5, border_radius=10
+            bgcolor="primary", padding=5, border_radius=10,
+            visible=not is_tab # התיקון: מסתיר את הכותרת הכחולה כשהמסך מופיע כטאב במובייל
         )
+
+        # כותרת נעימה למובייל בתוך התוכן
+        mobile_title = ft.Text(t("schedule.settings"), size=26, weight="bold", color="primary") if is_tab else ft.Container()
 
         self.controls = [
             header,
             ft.Container(
                 padding=20,
                 content=ft.Column([
+                    mobile_title,
+                    ft.Divider(height=10, color="transparent") if is_tab else ft.Container(),
                     language_section,
                     ft.Divider(height=20, color="transparent"),
                     ft.Text(t("settings.display", default="הגדרות תצוגה:"), size=16, weight="bold"),

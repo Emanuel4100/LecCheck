@@ -10,8 +10,6 @@ from utils.theme import AppTheme
 def main(page: ft.Page):
     page.title = "Lecture Tracker"
     page.theme_mode = ft.ThemeMode.LIGHT
-    
-    # חזרנו לארכיטקטורה המקורית והחכמה שלך!
     page.theme = AppTheme.get_theme()
     page.rtl = True
     
@@ -21,16 +19,20 @@ def main(page: ft.Page):
         page.on_resize = None 
         page.controls.clear()
         
+        view = None
         if screen_name == "onboarding":
-            page.controls.append(OnboardingView(page, my_schedule, change_screen))
+            view = OnboardingView(page, my_schedule, change_screen)
         elif screen_name == "schedule":
-            page.controls.append(ScheduleView(page, my_schedule, change_screen))
+            view = ScheduleView(page, my_schedule, change_screen)
         elif screen_name == "add":
-            page.controls.append(AddCourseView(page, my_schedule, change_screen))
+            view = AddCourseView(page, my_schedule, change_screen)
         elif screen_name == "add_meeting":
-            page.controls.append(AddMeetingView(page, my_schedule, change_screen))
+            view = AddMeetingView(page, my_schedule, change_screen)
         elif screen_name == "settings":
-            page.controls.append(SettingsView(page, my_schedule, change_screen))
+            view = SettingsView(page, my_schedule, change_screen, is_tab=False)
+            
+        # התיקון למובייל: עוטפים את המסך ב-SafeArea כדי שלא ייתקע בשורת הסטטוס העליונה!
+        page.controls.append(ft.SafeArea(view, expand=True))
         page.update()
 
     if my_schedule.load_from_file() and my_schedule.is_semester_set():
