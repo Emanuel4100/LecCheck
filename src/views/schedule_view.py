@@ -227,10 +227,20 @@ class ScheduleView(ft.Column):
     
     def refresh_ui(self):
         self.schedule.save_to_file()
-        self.weekly_grid_component.update_grid()
-        self.lectures_list_component.update_list()
+        
+        # התיקון הקריטי: עדכון חכם! מרעננים חזותית רק את מה שנמצא על המסך
+        if self.selected_tab == t("schedule.tab_weekly"):
+            self.weekly_grid_component.update_grid()
+            # מעדכן את הרשימות בזיכרון ה-RAM, מבלי לבקש מ-Flet לצייר אותן!
+            self.lectures_list_component.rebuild_lists() 
+        elif self.selected_tab == t("schedule.tab_lectures"):
+            self.lectures_list_component.update_list()
+            self.weekly_grid_component.update_grid()
+        else:
+            self.weekly_grid_component.update_grid()
+            self.lectures_list_component.rebuild_lists()
+            
         self.update_content()
-        # Optimization: Update ONLY the content area, preventing a massive whole-app re-render
         if self.content_area.page: 
             self.content_area.update()
 

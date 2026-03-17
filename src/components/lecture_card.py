@@ -194,7 +194,6 @@ class LectureCard(ft.Container):
             is_active = (self.lecture.status == status_value)
             def make_click_handler(stat_val):
                 def on_click(e):
-                    # --- Optimization: Check before triggering ---
                     if self.lecture.status == stat_val:
                         if self.current_dialog: 
                             self.current_dialog.open = False
@@ -202,10 +201,14 @@ class LectureCard(ft.Container):
                         return
                         
                     self.lecture.status = stat_val
-                    if self.update_callback: self.update_callback()
+                    
                     if self.current_dialog: 
                         self.current_dialog.open = False
                         e.page.update()
+                        
+                    if self.update_callback: 
+                        self.update_callback()
+                        
                 return on_click
 
             btn = ft.Container(

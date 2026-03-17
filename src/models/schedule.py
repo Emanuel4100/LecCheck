@@ -76,23 +76,40 @@ class SemesterSchedule:
         return [l for l in self.get_all_lectures() if l.date_obj and l.date_obj > today]
     
     def get_categorized_lectures(self):
-        """ Optimization: One pass over the schedule to categorize all lectures instead of 3 passes """
-        today = datetime.now().date()
+        """ חלוקה חכמה לפי תאריך ושעה (מעבר אחד בלבד על כל הקורסים) """
+        now = datetime.now()
+        today = now.date()
+        current_time = now.time()
+        
         all_lecs = self.get_all_lectures()
         
         pending, future, past = [], [], []
         for l in all_lecs:
             if not l.date_obj:
                 continue
+                
             if l.status == "status.needs_watching" and l.date_obj <= today:
                 pending.append(l)
-            elif l.date_obj < today and l.status != "status.needs_watching":
-                past.append(l)
-            elif l.date_obj > today:
-                future.append(l)
-                
+            else:
+                if l.date_obj < today:
+                    past.append(l)
+                elif l.date_obj > today:
+                    future.append(l)
+                else:
+                    if l.start_time:
+                        try:
+                            h, m = map(int, l.start_time.split(':'))
+                            if datetime(today.year, today.month, today.day, h, m).time() > current_time:
+                                future.append(l)
+                            else:
+                                past.append(l)
+                        except:
+                            past.append(l)
+                    else:
+                        past.append(l)
+                        
         return pending, future, past
-
+    
     def to_dict(self):
         return {
             "semester_start": self.semester_start.strftime("%Y-%m-%d") if self.semester_start else None,
