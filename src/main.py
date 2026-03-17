@@ -31,7 +31,6 @@ def main(page: ft.Page):
         elif screen_name == "settings":
             view = SettingsView(page, my_schedule, change_screen, is_tab=False)
             
-        # התיקון למובייל: עוטפים את המסך ב-SafeArea כדי שלא ייתקע בשורת הסטטוס העליונה!
         page.controls.append(ft.SafeArea(view, expand=True))
         page.update()
 

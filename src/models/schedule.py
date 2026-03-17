@@ -136,8 +136,14 @@ class SemesterSchedule:
             
             self.courses = []
             for c_data in data.get("courses", []):
-                self.courses.append(Course.from_dict(c_data))
+                course = Course.from_dict(c_data)
+                if not course.lectures and course.meetings and self.semester_start and self.semester_end:
+                    course.recalculate_all_lectures(self.semester_start, self.semester_end, self.enable_meeting_numbers)
+                self.courses.append(course)
+                
+            self.save_to_file()
             return True
+            
         except Exception as e:
             print(f"Error loading data: {e}")
             return False

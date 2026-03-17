@@ -2,7 +2,8 @@
     "common": {
         "back": "Back", "save": "Save", "add": "Add", "next": "Next", "prev": "Prev",
         "error": "Error!", "success": "Success!", "not_set": "Not Set", "not_selected": "Not Selected",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "load_more": "Load more lectures..."
     },
     "days": {
         "sunday": "Sunday", "monday": "Monday", "tuesday": "Tuesday",
@@ -61,14 +62,32 @@
         "select_course": "Select Course",
         "topic_title": "Topic / Title",
         "duration_mins": "Duration (mins)",
-        "meeting_type": "Type"
+        "meeting_type": "Type",
+        "load_next_week": "Load next week...",
+        "no_more_this_week": "No more lectures scheduled this week",
+        "total_duration": "Total time:"
     },
     "settings": {
-        "title": "Settings", "dates": "Semester Dates:", "display": "Display Settings:",
+        "title": "Settings", 
+        "dates": "Semester Dates:", 
+        "display": "Display Settings:",
         "show_weekend": "Show Weekend on Weekly Board",
         "enable_numbering": "Enable auto meeting numbers",
-        "language": "Language (שפת ממשק)", "save_success": "Settings saved successfully!",
-        "change_start": "Change Start", "change_end": "Change End"
+        "language": "Language:", 
+        "save_success": "Settings saved successfully!",
+        "change_start": "Change Start", 
+        "change_end": "Change End",
+        "data_management": "Data Management & Sync:",
+        "export_data": "Export Schedule (Save)",
+        "import_data": "Import Schedule (Replace)",
+        "import_warning": "* Note: Importing a file will replace all existing data on this device.",
+        "export_dialog_title": "Save Schedule File",
+        "import_dialog_title": "Select Schedule File to Load",
+        "export_success": "File saved successfully!",
+        "export_error": "Error saving: ",
+        "import_success": "Data loaded successfully!",
+        "import_failed": "Error: Invalid file.",
+        "import_error": "Error loading: "
     },
     "stats": {
         "no_data": "No data to display 📊", "title": "Statistics",

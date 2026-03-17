@@ -45,7 +45,7 @@ class LecturesList(ft.Column):
                 bgcolor="surfaceVariant",
                 border_radius=8
             ),
-            tooltip="מיון הרצאות"
+            tooltip=t("schedule.sort_lectures", default="מיון הרצאות")
         )
 
         self.summary_row = ft.Container(
@@ -86,19 +86,16 @@ class LecturesList(ft.Column):
         self.set_active_tab(0, update_ui=False)
 
     def _safe_update(self, control):
-        """ חומת מגן: מונעת קריסות פתאומיות כאשר הרכיב מתעדכן ברקע (כשאנחנו בלוח שבועי למשל) """
         if control and control.page:
             try:
                 control.update()
             except Exception:
-                # הבלמת השגיאה: הרכיב יעודכן אוטומטית כשהוא יחזור להיות מוצג במסך
                 pass
 
     def set_active_tab(self, new_idx, update_ui=True):
         if self.current_tab_idx == new_idx and not update_ui:
             return
             
-        # זיהוי מעבר לשונית כדי לאפס את כפתורי ה"טען עוד"
         is_tab_changed = (self.current_tab_idx != new_idx and self.current_tab_idx != -1)
         self.current_tab_idx = new_idx
         
@@ -126,7 +123,7 @@ class LecturesList(ft.Column):
         time_str = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
         if total_mins == 0: time_str = "0m"
 
-        self.summary_time_text.value = t("schedule.total_duration", default="סה״כ זמן:") + f" {time_str}"
+        self.summary_time_text.value = f"{t('schedule.total_duration', default='סה״כ זמן:')} {time_str}"
         if update_ui: self._safe_update(self.summary_time_text)
         
         has_lectures = self.has_items[new_idx]
@@ -155,7 +152,6 @@ class LecturesList(ft.Column):
         self.set_active_tab(self.current_tab_idx, update_ui=True)
 
     def update_list(self):
-        # הפונקציה נקראת בעת שינוי סטטוס ממסכים אחרים
         self.rebuild_lists()
         self.set_active_tab(self.current_tab_idx, update_ui=True)
 
@@ -172,7 +168,6 @@ class LecturesList(ft.Column):
         ]
         self.sort_btn_text.value = next(label for k, label in sort_options if k == self.current_sort_method)
 
-        # שימוש אופטימלי בפונקציית החלוקה שבנינו, עם חזרה לגיבוי למקרה של תקלת-פיתוח
         try:
             pending, future, past = self.schedule.get_categorized_lectures()
         except AttributeError:
@@ -200,8 +195,8 @@ class LecturesList(ft.Column):
                 max_future_date = today + timedelta(days=days_to_saturday + (7 * self.future_weeks_loaded))
                 display_lecs = [l for l in lecs if l.date_obj and l.date_obj <= max_future_date]
                 has_more = len(display_lecs) < len(lecs)
-                btn_text = "טען את השבוע הבא..."
-                empty_msg = "אין עוד הרצאות מתוכננות השבוע"
+                btn_text = t("schedule.load_next_week", default="טען את השבוע הבא...")
+                empty_msg = t("schedule.no_more_this_week", default="אין עוד הרצאות מתוכננות השבוע")
             else:
                 current_limit = self.visible_limits[i]
                 display_lecs = lecs[:current_limit]
@@ -261,7 +256,6 @@ class LecturesList(ft.Column):
                 )
                 new_controls.append(load_more_btn)
 
-            # Assign all at once to avoid constant UI mutations
             self.list_views[i].controls = new_controls
 
         self._cards_cache = new_cache

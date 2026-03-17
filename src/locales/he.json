@@ -9,7 +9,8 @@
         "success": "בהצלחה!",
         "not_set": "לא הוגדר",
         "not_selected": "לא נבחר",
-        "cancel": "ביטול"
+        "cancel": "ביטול",
+        "load_more": "טען עוד הרצאות..."
     },
     "days": {
         "sunday": "ראשון", "monday": "שני", "tuesday": "שלישי",
@@ -79,14 +80,32 @@
         "select_course": "בחר קורס",
         "topic_title": "נושא / כותרת",
         "duration_mins": "אורך משוער (בדקות)",
-        "meeting_type": "סוג"
+        "meeting_type": "סוג",
+        "load_next_week": "טען את השבוע הבא...",
+        "no_more_this_week": "אין עוד הרצאות מתוכננות השבוע",
+        "total_duration": "סה״כ זמן:"
     },
     "settings": {
-        "title": "הגדרות", "dates": "תאריכי הסמסטר:", "display": "הגדרות תצוגה:",
+        "title": "הגדרות", 
+        "dates": "תאריכי סמסטר:", 
+        "display": "הגדרות תצוגה:",
         "show_weekend": "הצג סופ״ש בלוח השבועי (שישי-שבת)",
         "enable_numbering": "הפעל מספור מפגשים אוטומטי",
-        "language": "שפת ממשק (Language)", "save_success": "ההגדרות נשמרו בהצלחה!",
-        "change_start": "שנה התחלה", "change_end": "שנה סיום"
+        "language": "שפה:", 
+        "save_success": "ההגדרות נשמרו בהצלחה!",
+        "change_start": "שנה התחלה", 
+        "change_end": "שנה סיום",
+        "data_management": "ניהול וסנכרון נתונים:",
+        "export_data": "ייצוא מערכת (שמירה)",
+        "import_data": "ייבוא מערכת (החלפה)",
+        "import_warning": "* שימו לב: ייבוא קובץ יחליף את כל הנתונים הקיימים במכשיר זה.",
+        "export_dialog_title": "שמור קובץ מערכת שעות",
+        "import_dialog_title": "בחר קובץ מערכת שעות לטעינה",
+        "export_success": "הקובץ נשמר בהצלחה!",
+        "export_error": "שגיאה בשמירה: ",
+        "import_success": "הנתונים נטענו בהצלחה!",
+        "import_failed": "שגיאה: הקובץ לא תקין.",
+        "import_error": "שגיאה בטעינה: "
     },
     "stats": {
         "no_data": "אין נתונים להציג כרגע 📊",
