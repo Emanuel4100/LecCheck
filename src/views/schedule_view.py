@@ -212,11 +212,17 @@ class ScheduleView(ft.Column):
 
     def create_tab_click_handler(self, tab):
         def on_click(e):
-            # התיקון: כעת לחיצה על הגדרות הופכת אותו לטאב רגיל במובייל
+            if tab == t("schedule.settings"):
+                self.change_screen("settings")
+                return
             self.selected_tab = tab
             self.build_tabs()
             self.update_content()
-            self.update()
+            
+            # Optimization: Targeted updates instead of global self.update()
+            if self.tabs_container.page: self.tabs_container.update()
+            if self.bottom_nav.page: self.bottom_nav.update()
+            if self.content_area.page: self.content_area.update()
         return on_click
     
     def refresh_ui(self):
@@ -224,7 +230,13 @@ class ScheduleView(ft.Column):
         self.weekly_grid_component.update_grid()
         self.lectures_list_component.update_list()
         self.update_content()
-        self.update()
+        # Optimization: Update ONLY the content area, preventing a massive whole-app re-render
+        if self.content_area.page: 
+            self.content_area.update()
+
+    def update_content(self):
+        main_view = None
+        # ... (המשך הפונקציה נשאר כפי שהוא) ...
 
     def update_content(self):
         main_view = None

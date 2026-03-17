@@ -13,7 +13,6 @@ class LecturesList(ft.Column):
         self.current_sort_method = "date"
         self._cards_cache = {}
 
-        # 1. Custom Tab Bar: חסין תקלות ורץ פי 10 יותר מהר מהלשוניות המובנות
         self.tab_buttons = []
         self.tabs_row = ft.Row(alignment=ft.MainAxisAlignment.SPACE_AROUND, spacing=0)
         
@@ -29,7 +28,6 @@ class LecturesList(ft.Column):
             self.tab_buttons.append(btn)
             self.tabs_row.controls.append(btn)
 
-        # 2. UI Elements
         self.summary_time_text = ft.Text("", weight="bold", color="primary", size=14)
         self.sort_btn_text = ft.Text("", color="primary", weight="bold", size=13)
 
@@ -60,7 +58,7 @@ class LecturesList(ft.Column):
 
         self.divider = ft.Divider(height=1, color="outlineVariant", opacity=0.5)
         
-        # 3. שלוש רשימות שנטענות פעם אחת בלבד ונשארות בזיכרון (Pre-rendered)
+        # --- THE PRO SOLUTION: 3 Separate Lists in a Stack (Zero Diffing!) ---
         self.missing_list = ft.ListView(expand=True, padding=20, spacing=10, visible=True)
         self.future_list = ft.ListView(expand=True, padding=20, spacing=10, visible=False)
         self.past_list = ft.ListView(expand=True, padding=20, spacing=10, visible=False)
@@ -69,8 +67,9 @@ class LecturesList(ft.Column):
         self.totals = [0, 0, 0]
         self.has_items = [False, False, False]
 
-        # Stack מאפשר להסתיר ולהציג אותן באותו מקום מבלי להפריע למבנה המסך
+        # Stack allows all 3 lists to exist simultaneously, we just toggle visibility
         self.views_container = ft.Stack(self.list_views, expand=True)
+        # ---------------------------------------------------------------------
 
         self.controls = [
             self.tabs_row,
@@ -82,23 +81,15 @@ class LecturesList(ft.Column):
         
         self.current_tab_idx = -1
         
-        # הפעלה ראשונית של בניית הנתונים בזיכרון (ללא שום ציור מסך!)
         self.rebuild_lists()
-        
-        # בחירת לשונית ראשונה עם חסימת רענון כדי למנוע את קריסת ה-Control
         self.set_active_tab(0, update_ui=False)
 
     def set_active_tab(self, new_idx, update_ui=True):
-        """ 
-        פונקציית עדכוני הלייזר: מעדכנת אך ורק את הרכיבים הרלוונטיים במקום לרענן את כל העמוד!
-        חוסך 99% מהמאמץ של המעבד במעבר לשוניות.
-        """
         if self.current_tab_idx == new_idx and not update_ui:
             return
             
         self.current_tab_idx = new_idx
         
-        # 1. עדכון עיצוב הלשוניות (הפס הכחול)
         for i, btn in enumerate(self.tab_buttons):
             is_active = (i == new_idx)
             btn.border = ft.border.only(bottom=ft.border.BorderSide(3, "primary")) if is_active else None
@@ -106,14 +97,13 @@ class LecturesList(ft.Column):
             btn.content.weight = "bold" if is_active else "w500"
             if update_ui and btn.page: btn.update()
 
-        # 2. עדכון חשיפת הרשימות במיידי
+        # O(1) Visibility Swap. Bypasses Flet's slow diffing algorithm.
         for i, lst in enumerate(self.list_views):
             is_active = (i == new_idx)
             if lst.visible != is_active:
                 lst.visible = is_active
                 if update_ui and lst.page: lst.update()
 
-        # 3. עדכון טקסטים של סך הכל זמן
         total_mins = self.totals[new_idx]
         hours = total_mins // 60
         mins = total_mins % 60
@@ -135,14 +125,12 @@ class LecturesList(ft.Column):
     def handle_sort(self, e):
         self.current_sort_method = e.control.data
         self.rebuild_lists()
-        # כשהנתונים עצמם השתנו (בגלל מיון), חובה לעדכן את הרשימות חזותית
         if self.page:
             for lst in self.list_views:
                 lst.update()
             self.set_active_tab(self.current_tab_idx, update_ui=True)
 
     def update_list(self):
-        # נקרא מבחוץ כשקורס נמחק או התווסף
         self.rebuild_lists()
         if self.page:
             for lst in self.list_views:
@@ -162,11 +150,9 @@ class LecturesList(ft.Column):
         ]
         self.sort_btn_text.value = next(label for k, label in sort_options if k == self.current_sort_method)
 
-        lists_data = [
-            self.schedule.get_pending_lectures(),
-            self.schedule.get_future_lectures(),
-            self.schedule.get_past_lectures()
-        ]
+        # Uses the new optimized O(N) fetch method
+        pending, future, past = self.schedule.get_categorized_lectures()
+        lists_data = [pending, future, past]
 
         new_cache = {}
 
@@ -202,7 +188,6 @@ class LecturesList(ft.Column):
                         except Exception:
                             pass
 
-                    # משיכת הכרטיסייה מה-Cache (חסכוני בביצועים)
                     cache_key = f"{lec.session_id}_{lec.status}_{lec.duration_mins}_{lec.external_link}"
                     if cache_key in self._cards_cache:
                         card = self._cards_cache[cache_key]
