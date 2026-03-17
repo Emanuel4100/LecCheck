@@ -39,15 +39,19 @@ class LecturesList(ft.Column):
             )
             filter_row.controls.append(btn)
 
+        # --- התיקון: הוצאת ה-on_change מחוץ לסוגריים כדי שיתאים לגרסה שלך! ---
         sort_dropdown = ft.Dropdown(
             options=[
                 ft.dropdown.Option("date", t("schedule.sort_date", default="מיון: תאריך")),
                 ft.dropdown.Option("duration", t("schedule.sort_duration", default="מיון: אורך")),
                 ft.dropdown.Option("type", t("schedule.sort_type", default="מיון: סוג"))
             ],
-            value=self.current_sort_method, width=150, dense=True
+            value=self.current_sort_method, 
+            width=150, 
+            dense=True
         )
         sort_dropdown.on_change = self.change_sort_method
+        # ----------------------------------------------------------------------
         
         top_bar = ft.Row([filter_row, sort_dropdown], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
 
@@ -67,7 +71,6 @@ class LecturesList(ft.Column):
         else:
             lectures.sort(key=lambda x: (x.date_obj if x.date_obj else datetime.min.date(), x.start_time if x.start_time else "00:00"))
 
-        # --- חישוב הזמן הכולל של ההרצאות שמוצגות כרגע ---
         total_mins = 0
         for l in lectures:
             if l.duration_mins:
@@ -87,7 +90,6 @@ class LecturesList(ft.Column):
         time_str += f"{mins}m"
         if total_mins == 0: time_str = "0m"
 
-        # יצירת השורה של סך הכל זמן (מוסתרת אם הרשימה ריקה)
         summary_text = t("schedule.total_duration", default="סה״כ זמן:") + f" {time_str}"
         summary_row = ft.Container(
             content=ft.Row([
@@ -95,9 +97,8 @@ class LecturesList(ft.Column):
                 ft.Text(summary_text, weight="bold", color="primary", size=14)
             ], spacing=6, alignment=ft.MainAxisAlignment.START),
             padding=ft.padding.only(left=20, right=20, top=5),
-            visible=len(lectures) > 0  # להציג רק אם יש הרצאות להשלים
+            visible=len(lectures) > 0  
         )
-        # --------------------------------------------------
 
         if not lectures:
             empty_state = ft.Column([
@@ -111,6 +112,6 @@ class LecturesList(ft.Column):
 
         self.controls = [
             ft.Container(content=top_bar, padding=ft.padding.only(top=10, bottom=5, left=10, right=10)),
-            summary_row, # הוספת השורה ממש מתחת לתפריטי הסינון
+            summary_row,
             list_view
         ]

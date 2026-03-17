@@ -9,16 +9,39 @@ class SettingsView(ft.Column):
         self.schedule = schedule
         self.change_screen = change_screen_func
 
-        self.lang_dropdown = ft.Dropdown(
-            label=t("settings.language"),
-            options=[
-                ft.dropdown.Option("he", "עברית"),
-                ft.dropdown.Option("en", "English")
-            ],
-            value=self.schedule.language,
-            width=200
+        # --- פתרון אלגנטי וחסין-תקלות לשפות: כפתורים במקום תפריט נפתח ---
+        def set_language(lang):
+            if self.schedule.language == lang: return
+            self.schedule.language = lang
+            translator.set_language(lang)
+            self.app_page.rtl = (lang == "he")
+            self.schedule.save_to_file()
+            self.app_page.update()
+            self.change_screen("settings")
+
+        self.lang_he_btn = ft.ElevatedButton(
+            content=ft.Text("עברית", weight="bold"),
+            style=ft.ButtonStyle(
+                bgcolor="primary" if self.schedule.language == "he" else "surfaceVariant",
+                color="onPrimary" if self.schedule.language == "he" else "onSurfaceVariant",
+            ),
+            on_click=lambda _: set_language("he")
         )
-        self.lang_dropdown.on_change = self.change_language
+
+        self.lang_en_btn = ft.ElevatedButton(
+            content=ft.Text("English", weight="bold"),
+            style=ft.ButtonStyle(
+                bgcolor="primary" if self.schedule.language == "en" else "surfaceVariant",
+                color="onPrimary" if self.schedule.language == "en" else "onSurfaceVariant",
+            ),
+            on_click=lambda _: set_language("en")
+        )
+
+        language_section = ft.Column([
+            ft.Text(t("settings.language"), size=16, weight="bold"),
+            ft.Row([self.lang_he_btn, self.lang_en_btn], spacing=10)
+        ])
+        # -----------------------------------------------------------
 
         self.weekend_switch = ft.Switch(
             label=t("settings.show_weekend"),
@@ -61,9 +84,8 @@ class SettingsView(ft.Column):
         self.end_text = ft.Text("")
         self.update_date_texts()
 
-        # התיקון: הסרת הטקסט הכפול בתוך הגדרת הכפתור
         date_section = ft.Column([
-            ft.Text(t("settings.dates"), weight="bold"),
+            ft.Text(t("settings.dates"), weight="bold", size=16),
             ft.Row([
                 ft.ElevatedButton(
                     content=ft.Row([ft.Image(src="icons/calendar_month.svg", width=18, height=18, color="primary"), ft.Text(t("settings.change_start", default="שנה התחלה"), color="primary")]), 
@@ -93,12 +115,14 @@ class SettingsView(ft.Column):
             ft.Container(
                 padding=20,
                 content=ft.Column([
-                    self.lang_dropdown,
+                    language_section,
+                    ft.Divider(height=20, color="transparent"),
+                    ft.Text(t("settings.display", default="הגדרות תצוגה:"), size=16, weight="bold"),
                     self.weekend_switch,
                     self.numbers_switch,
                     ft.Divider(height=30),
                     date_section
-                ], spacing=20)
+                ], spacing=10)
             )
         ]
 
@@ -113,14 +137,6 @@ class SettingsView(ft.Column):
                 self.update()
         except Exception:
             pass
-
-    def change_language(self, e):
-        self.schedule.language = self.lang_dropdown.value
-        translator.set_language(self.schedule.language)
-        self.app_page.rtl = (self.schedule.language == "he")
-        self.schedule.save_to_file()
-        self.app_page.update()
-        self.change_screen("settings") 
 
     def toggle_weekend(self, e):
         self.schedule.show_weekend = self.weekend_switch.value
