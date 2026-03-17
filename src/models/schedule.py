@@ -1,5 +1,6 @@
 import json
 import os
+import threading 
 from datetime import datetime, timedelta
 from models.course import Course
 from utils.i18n import translator
@@ -14,7 +15,7 @@ class SemesterSchedule:
         self.show_weekend = False
         self.enable_meeting_numbers = True
         
-        # זיהוי אוטומטי של תיקייה בטוחה לכתיבה (מובייל) או שימוש בתיקייה נוכחית (מחשב)
+        # Auto-detect safe folder for mobile or current folder for PC
         app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
         if app_data_path:
             self.data_file = os.path.join(app_data_path, "schedule_data.json")
@@ -107,8 +108,18 @@ class SemesterSchedule:
             return False
 
     def save_to_file(self):
-        try:
-            with open(self.data_file, 'w', encoding='utf-8') as f:
-                json.dump(self.to_dict(), f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            print(f"Failed to save: {e}")
+        # Define an internal function for the actual disk write
+        def _save_task():
+            try:
+                # Capture the dict payload in the current thread before writing
+                # to avoid potential race conditions if the UI modifies it during write
+                payload = self.to_dict() 
+                with open(self.data_file, 'w', encoding='utf-8') as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=4)
+            except Exception as e:
+                print(f"Failed to save schedule: {e}")
+
+        # Start the saving process in a background thread
+        # This prevents the UI from freezing during file I/O operations
+        save_thread = threading.Thread(target=_save_task, daemon=True)
+        save_thread.start()

@@ -73,16 +73,36 @@ class WeeklyGrid(ft.Column):
 
             day_lecs = [l for l in lectures if l.date_obj == current_day_date and l.start_time and l.end_time]
             
-            for lec in day_lecs:
-                lec_start_m, lec_end_m = self.time_to_minutes(lec.start_time), self.time_to_minutes(lec.end_time)
-                is_overlapping = any(lec.session_id != other.session_id and max(lec_start_m, self.time_to_minutes(other.start_time)) < min(lec_end_m, self.time_to_minutes(other.end_time)) for other in day_lecs)
+            # --- Optimization: Sort once O(N log N) instead of O(N^2) nested loops ---
+            day_lecs.sort(key=lambda l: self.time_to_minutes(l.start_time))
+            
+            for index, lec in enumerate(day_lecs):
+                lec_start_m = self.time_to_minutes(lec.start_time)
+                lec_end_m = self.time_to_minutes(lec.end_time)
                 
-                top_pos, height = max(0, (lec_start_m - START_HOUR * 60) * SCALE), max(30, (lec_end_m - lec_start_m) * SCALE)
+                is_overlapping = False
+                
+                # Check overlap with previous lecture
+                if index > 0:
+                    prev_end = self.time_to_minutes(day_lecs[index - 1].end_time)
+                    if prev_end > lec_start_m:
+                        is_overlapping = True
+                        
+                # Check overlap with next lecture
+                if not is_overlapping and index < len(day_lecs) - 1:
+                    next_start = self.time_to_minutes(day_lecs[index + 1].start_time)
+                    if next_start < lec_end_m:
+                        is_overlapping = True
+                # -----------------------------------------------------------------------
+                
+                top_pos = max(0, (lec_start_m - START_HOUR * 60) * SCALE)
+                height = max(30, (lec_end_m - lec_start_m) * SCALE)
                 card = LectureCard(lec, self.refresh_callback, is_mobile=self.is_narrow_screen, show_date=False)
                 
                 if is_overlapping:
                     card.border = ft.border.all(2, "error")
-                    if not self.is_narrow_screen: card.content.controls.insert(0, ft.Row([ft.Image(src="icons/warning_amber.svg", width=12, height=12, color="error"), ft.Text(t("schedule.overlap"), color="error", weight="bold", size=10)]))
+                    if not self.is_narrow_screen: 
+                        card.content.controls.insert(0, ft.Row([ft.Image(src="icons/warning_amber.svg", width=12, height=12, color="error"), ft.Text(t("schedule.overlap"), color="error", weight="bold", size=10)]))
                 day_stack.controls.append(ft.Container(top=top_pos, height=height, left=0, right=0, content=card, opacity=0.9 if is_overlapping else 1.0))
 
             day_col = ft.Column([col_header, ft.Container(content=day_stack, expand=True)], spacing=10)
@@ -90,7 +110,6 @@ class WeeklyGrid(ft.Column):
 
         grid_row = ft.Row(controls=day_columns + [ft.Container(content=time_column, width=30 if self.is_narrow_screen else 40)], vertical_alignment=ft.CrossAxisAlignment.START)
         
-
         self.controls = [
             nav_row, 
             ft.ListView(controls=[grid_row], expand=True) 

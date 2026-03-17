@@ -13,7 +13,7 @@ class LectureCard(ft.Container):
         self.current_dialog = None
         
         self.border_radius = 8 if self.is_mobile else 12
-        self.padding = 4 if self.is_mobile else 12  # קצת יותר ריווח לרשימה כדי שתנשום
+        self.padding = 4 if self.is_mobile else 12
         self.margin = ft.margin.only(bottom=5 if self.is_mobile else 8)
         self.shadow = ft.BoxShadow(spread_radius=0, blur_radius=2, color="shadow", offset=ft.Offset(0, 1))
 
@@ -26,16 +26,13 @@ class LectureCard(ft.Container):
         }
         b_color = status_colors.get(self.lecture.status, "transparent")
         
-        # --- ההפרדה החכמה בין היומן לרשימה ---
         if self.is_mobile:
-            # בלוח השבועי: שומרים על בלוק צבע מלא כדי שיראה כמו יומן
             self.bgcolor = self.lecture.course_color
             self.border = ft.border.all(1.5, b_color) if b_color != "transparent" else None
             self.content = self.build_compact_view()
             self.on_click = self.open_popup
             self.ink = True 
         else:
-            # בלשונית ההרצאות: רקע נקי עם מסגרת עדינה
             self.bgcolor = "surface"
             self.border = ft.border.all(1.5, b_color) if b_color != "transparent" else ft.border.all(1, "outlineVariant")
             self.content = self.build_detailed_view()
@@ -47,7 +44,6 @@ class LectureCard(ft.Container):
         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, expand=True)
 
     def build_detailed_view(self):
-        # נגיעת הצבע: עיגול קטן ליד הכותרת במקום לצבוע את כל הכרטיסייה
         course_dot = ft.Container(width=12, height=12, border_radius=6, bgcolor=self.lecture.course_color)
         title = ft.Text(self.lecture.display_title, weight="bold", size=14, color="onSurface", no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS, expand=True)
         title_row = ft.Row([course_dot, title], spacing=8, alignment=ft.MainAxisAlignment.START)
@@ -114,11 +110,19 @@ class LectureCard(ft.Container):
                 break
 
         def on_status_selected(e):
-            self.lecture.status = e.control.data
-            if self.update_callback: self.update_callback()
+            new_status = e.control.data
+            
+            # --- Optimization: Prevent unnecessary global state updates ---
+            if self.lecture.status == new_status:
+                return 
+
+            self.lecture.status = new_status
+            if self.update_callback: 
+                self.update_callback()
 
         items = []
         for icon_name, status_value, text_label, active_color in options:
+            # Flet 1.0 safe PopupMenuItem using content= instead of text=
             items.append(
                 ft.PopupMenuItem(
                     data=status_value,
@@ -171,7 +175,6 @@ class LectureCard(ft.Container):
         e.page.overlay.append(self.current_dialog); self.current_dialog.open = True; e.page.update()
 
     def build_popup_content(self):
-        # גם בפופ-אפ במובייל: עברנו לעיצוב נקי עם עיגול צבע
         course_dot = ft.Container(width=14, height=14, border_radius=7, bgcolor=self.lecture.course_color)
         title_text = ft.Text(self.lecture.display_title, weight="bold", size=18, color="onSurface", text_align="center", expand=True)
         title_row = ft.Row([course_dot, title_text], alignment=ft.MainAxisAlignment.CENTER, spacing=8)
@@ -191,9 +194,18 @@ class LectureCard(ft.Container):
             is_active = (self.lecture.status == status_value)
             def make_click_handler(stat_val):
                 def on_click(e):
+                    # --- Optimization: Check before triggering ---
+                    if self.lecture.status == stat_val:
+                        if self.current_dialog: 
+                            self.current_dialog.open = False
+                            e.page.update()
+                        return
+                        
                     self.lecture.status = stat_val
                     if self.update_callback: self.update_callback()
-                    if self.current_dialog: self.current_dialog.open = False; e.page.update()
+                    if self.current_dialog: 
+                        self.current_dialog.open = False
+                        e.page.update()
                 return on_click
 
             btn = ft.Container(
@@ -219,7 +231,7 @@ class LectureCard(ft.Container):
         self.current_dialog = ft.AlertDialog(
             content=ft.Container(content=self.build_popup_content(), width=320, padding=10),
             shape=ft.RoundedRectangleBorder(radius=15), 
-            bgcolor="surface", # הרקע של הפופ-אפ הפך לנקי (לבן/אפור בהיר) במקום צבעוני
+            bgcolor="surface", 
             actions=[ft.TextButton(t("common.back", default="חזור"), on_click=close_dlg)],
             actions_alignment=ft.MainAxisAlignment.END
         )

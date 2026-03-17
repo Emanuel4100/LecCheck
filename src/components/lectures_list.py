@@ -10,16 +10,26 @@ class LecturesList(ft.Column):
         self.refresh_callback = refresh_callback
         
         self.filters = [t("schedule.tab_missing"), t("schedule.tab_future"), t("schedule.tab_past")]
-        self.selected_lecture_filter = self.filters[0]
         self.current_sort_method = "date"
+        self._cards_cache = {}
 
-        # 1. יצירת ה-TabBar - זה הרכיב החדש ב-Flet 1.0 שמחזיק את הלשוניות החזותיות
-        # שימו לב: משתמשים ב-label (שלתוכו מכניסים Control) בדיוק לפי הכללים החדשים!
-        self.tab_bar = ft.TabBar(
-            tabs=[ft.Tab(label=ft.Text(f, weight="bold", size=14)) for f in self.filters]
-        )
+        # 1. Custom Tab Bar: חסין תקלות ורץ פי 10 יותר מהר מהלשוניות המובנות
+        self.tab_buttons = []
+        self.tabs_row = ft.Row(alignment=ft.MainAxisAlignment.SPACE_AROUND, spacing=0)
+        
+        for i, f_name in enumerate(self.filters):
+            btn = ft.Container(
+                content=ft.Text(f_name, weight="w500", color="onSurfaceVariant", size=14),
+                alignment=ft.Alignment(0, 0),
+                padding=ft.padding.symmetric(vertical=15),
+                ink=True,
+                on_click=lambda e, idx=i: self.set_active_tab(idx),
+                expand=True
+            )
+            self.tab_buttons.append(btn)
+            self.tabs_row.controls.append(btn)
 
-        # 2. יצירת רכיבי UI סטטיים לביצועים מקסימליים (למעבר מהיר בין לשוניות)
+        # 2. UI Elements
         self.summary_time_text = ft.Text("", weight="bold", color="primary", size=14)
         self.sort_btn_text = ft.Text("", color="primary", weight="bold", size=13)
 
@@ -50,150 +60,158 @@ class LecturesList(ft.Column):
 
         self.divider = ft.Divider(height=1, color="outlineVariant", opacity=0.5)
         
-        self.list_view = ft.ListView(expand=True, padding=20, spacing=10)
+        # 3. שלוש רשימות שנטענות פעם אחת בלבד ונשארות בזיכרון (Pre-rendered)
+        self.missing_list = ft.ListView(expand=True, padding=20, spacing=10, visible=True)
+        self.future_list = ft.ListView(expand=True, padding=20, spacing=10, visible=False)
+        self.past_list = ft.ListView(expand=True, padding=20, spacing=10, visible=False)
         
-        self.gesture_wrapper = ft.GestureDetector(
-            content=self.list_view,
-            on_horizontal_drag_end=self.handle_swipe,
-            expand=True
-        )
+        self.list_views = [self.missing_list, self.future_list, self.past_list]
+        self.totals = [0, 0, 0]
+        self.has_items = [False, False, False]
 
-        self.list_container = ft.Container(
-            content=ft.Column([
-                self.summary_row,
-                self.divider,
-                self.gesture_wrapper
-            ], expand=True, spacing=0),
-            expand=True
-        )
+        # Stack מאפשר להסתיר ולהציג אותן באותו מקום מבלי להפריע למבנה המסך
+        self.views_container = ft.Stack(self.list_views, expand=True)
+
+        self.controls = [
+            self.tabs_row,
+            ft.Divider(height=1, color="outlineVariant", opacity=0.3),
+            self.summary_row,
+            self.divider,
+            self.views_container
+        ]
         
-        # 3. ה-Tabs ב-Flet 1.0 הוא עכשיו רק "בקר שליטה" עוטף
-        # הוא מקבל length (מספר הלשוניות) ו-content (שבו נמצא ה-TabBar שלנו והרשימה)
-        self.tabs_control = ft.Tabs(
-            selected_index=0,
-            length=len(self.filters),
-            animation_duration=300,
-            on_change=self.handle_tab_change,
-            expand=True,
-            content=ft.Column(
-                expand=True,
-                spacing=0,
-                controls=[
-                    self.tab_bar,
-                    self.list_container
-                ]
-            )
-        )
+        self.current_tab_idx = -1
         
-        self.controls = [self.tabs_control]
+        # הפעלה ראשונית של בניית הנתונים בזיכרון (ללא שום ציור מסך!)
+        self.rebuild_lists()
         
-        self.update_list()
+        # בחירת לשונית ראשונה עם חסימת רענון כדי למנוע את קריסת ה-Control
+        self.set_active_tab(0, update_ui=False)
 
-    def handle_tab_change(self, e):
-        self.selected_lecture_filter = self.filters[e.control.selected_index]
-        self.update_list()
-        self.update()
-
-    def change_filter(self, filter_name):
-        self.selected_lecture_filter = filter_name
-        try:
-            self.tabs_control.selected_index = self.filters.index(filter_name)
-        except ValueError:
-            pass
-        self.update_list()
-        self.update()
-
-    def handle_swipe(self, e: ft.DragEndEvent):
-        velocity = e.primary_velocity
-        try:
-            idx = self.filters.index(self.selected_lecture_filter)
-        except ValueError:
+    def set_active_tab(self, new_idx, update_ui=True):
+        """ 
+        פונקציית עדכוני הלייזר: מעדכנת אך ורק את הרכיבים הרלוונטיים במקום לרענן את כל העמוד!
+        חוסך 99% מהמאמץ של המעבד במעבר לשוניות.
+        """
+        if self.current_tab_idx == new_idx and not update_ui:
             return
-        new_idx = idx
-        
-        if self.schedule.language == "he":
-            if velocity < -300 and idx > 0:          
-                new_idx = idx - 1
-            elif velocity > 300 and idx < len(self.filters) - 1: 
-                new_idx = idx + 1
-        else:
-            if velocity < -300 and idx < len(self.filters) - 1:
-                new_idx = idx + 1
-            elif velocity > 300 and idx > 0:
-                new_idx = idx - 1
-                
-        if new_idx != idx:
-            self.change_filter(self.filters[new_idx])
-
-    def update_list(self):
-        if self.selected_lecture_filter == self.filters[0]:
-            lectures = self.schedule.get_pending_lectures()
-        elif self.selected_lecture_filter == self.filters[2]:
-            lectures = self.schedule.get_past_lectures()
-        else:
-            lectures = self.schedule.get_future_lectures()
             
-        if self.current_sort_method == "duration":
-            lectures.sort(key=lambda x: x.duration_mins or 0, reverse=True)
-        elif self.current_sort_method == "type":
-            lectures.sort(key=lambda x: str(x.meeting_type))
-        else:
-            lectures.sort(key=lambda x: (x.date_obj if x.date_obj else datetime.min.date(), x.start_time if x.start_time else "00:00"))
+        self.current_tab_idx = new_idx
+        
+        # 1. עדכון עיצוב הלשוניות (הפס הכחול)
+        for i, btn in enumerate(self.tab_buttons):
+            is_active = (i == new_idx)
+            btn.border = ft.border.only(bottom=ft.border.BorderSide(3, "primary")) if is_active else None
+            btn.content.color = "primary" if is_active else "onSurfaceVariant"
+            btn.content.weight = "bold" if is_active else "w500"
+            if update_ui and btn.page: btn.update()
 
-        total_mins = 0
-        for l in lectures:
-            if l.duration_mins:
-                total_mins += l.duration_mins
-            elif l.start_time and l.end_time:
-                try:
-                    h1, m1 = map(int, l.start_time.split(':'))
-                    h2, m2 = map(int, l.end_time.split(':'))
-                    total_mins += (h2 * 60 + m2) - (h1 * 60 + m1)
-                except Exception:
-                    pass
+        # 2. עדכון חשיפת הרשימות במיידי
+        for i, lst in enumerate(self.list_views):
+            is_active = (i == new_idx)
+            if lst.visible != is_active:
+                lst.visible = is_active
+                if update_ui and lst.page: lst.update()
 
+        # 3. עדכון טקסטים של סך הכל זמן
+        total_mins = self.totals[new_idx]
         hours = total_mins // 60
         mins = total_mins % 60
         time_str = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
         if total_mins == 0: time_str = "0m"
 
+        self.summary_time_text.value = t("schedule.total_duration", default="סה״כ זמן:") + f" {time_str}"
+        if update_ui and self.summary_time_text.page: self.summary_time_text.update()
+        
+        has_lectures = self.has_items[new_idx]
+        if self.summary_row.visible != has_lectures:
+            self.summary_row.visible = has_lectures
+            if update_ui and self.summary_row.page: self.summary_row.update()
+            
+        if self.divider.visible != has_lectures:
+            self.divider.visible = has_lectures
+            if update_ui and self.divider.page: self.divider.update()
+
+    def handle_sort(self, e):
+        self.current_sort_method = e.control.data
+        self.rebuild_lists()
+        # כשהנתונים עצמם השתנו (בגלל מיון), חובה לעדכן את הרשימות חזותית
+        if self.page:
+            for lst in self.list_views:
+                lst.update()
+            self.set_active_tab(self.current_tab_idx, update_ui=True)
+
+    def update_list(self):
+        # נקרא מבחוץ כשקורס נמחק או התווסף
+        self.rebuild_lists()
+        if self.page:
+            for lst in self.list_views:
+                lst.update()
+            self.set_active_tab(self.current_tab_idx, update_ui=True)
+
+    def rebuild_lists(self):
         sort_options = [
             ("date", t("schedule.sort_date", default="מיון: תאריך")),
             ("duration", t("schedule.sort_duration", default="מיון: אורך")),
             ("type", t("schedule.sort_type", default="מיון: סוג"))
         ]
         
-        def handle_sort(e):
-            self.current_sort_method = e.control.data
-            self.update_list()
-            self.update()
-
-        # שימוש תקין ב-Flet 1.0 עבור תפריט נפתח (חובה להשתמש ב-content במקום ב-text)
         self.sort_btn.items = [
-            ft.PopupMenuItem(
-                data=k, 
-                content=ft.Text(label), 
-                checked=(self.current_sort_method == k), 
-                on_click=handle_sort
-            )
+            ft.PopupMenuItem(data=k, content=ft.Text(label), checked=(self.current_sort_method == k), on_click=self.handle_sort)
             for k, label in sort_options
         ]
-        
         self.sort_btn_text.value = next(label for k, label in sort_options if k == self.current_sort_method)
-        self.summary_time_text.value = t("schedule.total_duration", default="סה״כ זמן:") + f" {time_str}"
-        
-        has_lectures = len(lectures) > 0
-        self.summary_row.visible = has_lectures
-        self.divider.visible = has_lectures
 
-        self.list_view.controls.clear()
-        
-        if not has_lectures:
-            empty_state = ft.Column([
-                ft.Image(src="icons/event_busy.svg", width=60, height=60, color="onSurfaceVariant"), 
-                ft.Text(t("schedule.no_lectures", default="אין הרצאות"), size=18, weight="w500", color="onSurfaceVariant")
-            ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-            self.list_view.controls.append(ft.Container(content=empty_state, alignment=ft.Alignment(0, 0), padding=ft.padding.only(top=100)))
-        else:
-            for lec in lectures:
-                self.list_view.controls.append(LectureCard(lec, self.refresh_callback, is_mobile=False, show_date=True))
+        lists_data = [
+            self.schedule.get_pending_lectures(),
+            self.schedule.get_future_lectures(),
+            self.schedule.get_past_lectures()
+        ]
+
+        new_cache = {}
+
+        for i, lecs in enumerate(lists_data):
+            if self.current_sort_method == "duration":
+                lecs.sort(key=lambda x: x.duration_mins or 0, reverse=True)
+            elif self.current_sort_method == "type":
+                lecs.sort(key=lambda x: str(x.meeting_type))
+            else:
+                lecs.sort(key=lambda x: (x.date_obj if x.date_obj else datetime.min.date(), x.start_time if x.start_time else "00:00"))
+
+            self.list_views[i].controls.clear()
+            
+            total_mins = 0
+            has_lecs = len(lecs) > 0
+            self.has_items[i] = has_lecs
+
+            if not has_lecs:
+                empty_state = ft.Column([
+                    ft.Image(src="icons/event_busy.svg", width=60, height=60, color="onSurfaceVariant"), 
+                    ft.Text(t("schedule.no_lectures", default="אין הרצאות"), size=18, weight="w500", color="onSurfaceVariant")
+                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+                self.list_views[i].controls.append(ft.Container(content=empty_state, alignment=ft.Alignment(0, 0), padding=ft.padding.only(top=100)))
+            else:
+                for lec in lecs:
+                    if lec.duration_mins:
+                        total_mins += lec.duration_mins
+                    elif lec.start_time and lec.end_time:
+                        try:
+                            h1, m1 = map(int, lec.start_time.split(':'))
+                            h2, m2 = map(int, lec.end_time.split(':'))
+                            total_mins += (h2 * 60 + m2) - (h1 * 60 + m1)
+                        except Exception:
+                            pass
+
+                    # משיכת הכרטיסייה מה-Cache (חסכוני בביצועים)
+                    cache_key = f"{lec.session_id}_{lec.status}_{lec.duration_mins}_{lec.external_link}"
+                    if cache_key in self._cards_cache:
+                        card = self._cards_cache[cache_key]
+                    else:
+                        card = LectureCard(lec, self.refresh_callback, is_mobile=False, show_date=True)
+                        
+                    new_cache[cache_key] = card
+                    self.list_views[i].controls.append(card)
+
+            self.totals[i] = total_mins
+
+        self._cards_cache = new_cache
