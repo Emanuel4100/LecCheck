@@ -17,9 +17,9 @@ async def main(page: ft.Page):
     page.theme = AppTheme.get_theme()
     page.rtl = True
     
-    provider = GoogleOAuthProvider(
+    pprovider = GoogleOAuthProvider(
         client_id="655164797100-mflosfct1l1s02qe19d4dluejflrhr3h.apps.googleusercontent.com",
-        client_secret="",
+        client_secret="", # נשאר ריק לאתר אינטרנט!
         redirect_url="https://Emanuel4100.github.io/LecCheck/oauth_callback",
     )
     
