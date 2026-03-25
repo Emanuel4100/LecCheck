@@ -2,6 +2,7 @@ import flet as ft
 from datetime import datetime
 import json
 import shutil
+import os
 from utils.i18n import translator, t
 
 class SettingsView(ft.Column):
@@ -43,46 +44,61 @@ class SettingsView(ft.Column):
 
         async def export_data(e):
             try:
-                picker = ft.FilePicker()
-                result = await picker.save_file_async(
-                    dialog_title=t("settings.export_dialog_title", default="שמור קובץ מערכת שעות"),
-                    file_name="my_schedule_data.json",
-                    file_type=ft.FilePickerFileType.CUSTOM,
-                    allowed_extensions=["json"]
-                )
+                # שומר את קובץ הייצוא ישירות בתיקיית הפרויקט המקומית
+                export_path = os.path.abspath("my_schedule_export.json")
+                with open(export_path, 'w', encoding='utf-8') as f:
+                    json.dump(self.schedule.to_dict(), f, ensure_ascii=False, indent=4)
                 
-                if result:
-                    path = result.path if hasattr(result, 'path') else result
-                    if path:
-                        with open(path, 'w', encoding='utf-8') as f:
-                            json.dump(self.schedule.to_dict(), f, ensure_ascii=False, indent=4)
-                        show_snackbar(t("settings.export_success", default="הקובץ נשמר בהצלחה!"))
+                show_snackbar(f"יוצא בהצלחה! הקובץ נשמר בנתיב: {export_path}")
             except Exception as ex:
-                show_snackbar(f"{t('settings.export_error', default='שגיאה בשמירה: ')}{str(ex)}")
+                show_snackbar(f"שגיאה בייצוא: {str(ex)}")
 
-        async def import_data(e):
-            try:
-                picker = ft.FilePicker()
-                result = await picker.pick_files_async(
-                    dialog_title=t("settings.import_dialog_title", default="בחר קובץ מערכת שעות לטעינה"),
-                    file_type=ft.FilePickerFileType.CUSTOM,
-                    allowed_extensions=["json"]
-                )
-                
-                if result:
-                    files = result.files if hasattr(result, 'files') else result
-                    if files and len(files) > 0:
-                        selected_file_path = files[0].path if hasattr(files[0], 'path') else files[0].get('path')
-                        shutil.copy(selected_file_path, self.schedule.data_file)
-                        success = self.schedule.load_from_file()
-                        
+        def open_import_dialog(e):
+            path_input = ft.TextField(
+                label="Path to .json",
+                hint_text="Documents/backup.json",
+                width=400,
+                rtl=True
+            )
+            
+            async def perform_import(ev):
+                target_path = path_input.value.strip().strip('"').strip("'")
+                if not target_path:
+                    return
+                if os.path.exists(target_path):
+                    try:
+                        shutil.copy(target_path, self.schedule.data_file)
+                        success = await self.schedule.load_from_file()
                         if success:
-                            show_snackbar(t("settings.import_success", default="הנתונים נטענו בהצלחה!"))
+                            show_snackbar("הנתונים יובאו בהצלחה!")
+                            dialog.open = False
+                            self.app_page.update()
                             self.change_screen("schedule")
                         else:
-                            show_snackbar(t("settings.import_failed", default="שגיאה: הקובץ לא תקין."))
-            except Exception as ex:
-                show_snackbar(f"{t('settings.import_error', default='שגיאה בטעינה: ')}{str(ex)}")
+                            show_snackbar("שגיאה: הקובץ לא תקין.")
+                    except Exception as ex:
+                        show_snackbar(f"שגיאה: {str(ex)}")
+                else:
+                    show_snackbar("הקובץ לא נמצא בנתיב שהוזן.")
+
+            def close_dialog(ev):
+                dialog.open = False
+                self.app_page.update()
+
+            dialog = ft.AlertDialog(
+                title=ft.Text("ייבוא קובץ מערכת שעות"),
+                content=ft.Column([
+                    ft.Text("מאחר והאפליקציה רצה כאתר, אנא הזן את הנתיב המלא לקובץ הגיבוי שלך:"),
+                    path_input
+                ], tight=True),
+                actions=[
+                    ft.TextButton("ייבא נתונים", on_click=perform_import),
+                    ft.TextButton("ביטול", on_click=close_dialog)
+                ]
+            )
+            self.app_page.overlay.append(dialog)
+            dialog.open = True
+            self.app_page.update()
 
         def set_language(lang):
             if self.schedule.language == lang: return
@@ -206,12 +222,11 @@ class SettingsView(ft.Column):
                 ft.ElevatedButton(
                     content=ft.Row([ft.Image(src="icons/push_pin.svg", width=18, height=18, color="onError"), ft.Text(t("settings.import_data", default="Import Schedule"), color="onError")]),
                     bgcolor="errorContainer",
-                    on_click=import_data
+                    on_click=open_import_dialog
                 )
             ]),
             ft.Divider(height=20, color="outlineVariant"),
             ft.ElevatedButton(
-                # שימוש ב-icon במקום ב-name!
                 content=ft.Row([ft.Icon(icon=ft.Icons.LOGOUT, color="onError"), ft.Text("התנתק מהמערכת", color="onError")], alignment=ft.MainAxisAlignment.CENTER),
                 bgcolor="errorContainer",
                 on_click=logout_user,

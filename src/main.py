@@ -12,7 +12,6 @@ from views.settings_view import SettingsView
 from views.login_page import LoginView
 from utils.theme import AppTheme
 
-# טעינת המשתנים הסודיים מקובץ ה-.env
 load_dotenv()
 
 async def main(page: ft.Page):
@@ -71,10 +70,8 @@ async def main(page: ft.Page):
             print(f"Logged in successfully as: {user_id}")
             my_schedule.set_user(user_id)
             
-            # מנסה למשוך מהענן
             success, msg = my_schedule.pull_from_server()
             
-            # אם נכשל (פיירבייס לא הוגדר או ענן ריק), נטען מגיבוי מקומי כדי לא לאבד נתונים
             if not success:
                 print(f"Cloud fetch failed ({msg}), loading local backup...")
                 await my_schedule.load_from_file()
