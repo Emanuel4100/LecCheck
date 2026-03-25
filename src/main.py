@@ -1,5 +1,3 @@
-import os
-from dotenv import load_dotenv
 import flet as ft
 from flet.auth.providers.google_oauth_provider import GoogleOAuthProvider
 
@@ -12,7 +10,6 @@ from views.settings_view import SettingsView
 from views.login_page import LoginView
 from utils.theme import AppTheme
 
-load_dotenv()
 
 async def main(page: ft.Page):
     page.title = "LecCheck"
@@ -21,9 +18,9 @@ async def main(page: ft.Page):
     page.rtl = True
     
     provider = GoogleOAuthProvider(
-        client_id=os.getenv("GOOGLE_CLIENT_ID", ""),
-        client_secret=os.getenv("GOOGLE_CLIENT_SECRET", ""),
-        redirect_url="http://localhost:8550/oauth_callback",
+        client_id="655164797100-mflosfct1l1s02qe19d4dluejflrhr3h.apps.googleusercontent.com",
+        client_secret="",
+        redirect_url="https://Emanuel4100.github.io/LecCheck/oauth_callback",
     )
     
     my_schedule = SemesterSchedule(page=page)
