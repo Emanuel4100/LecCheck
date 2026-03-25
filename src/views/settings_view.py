@@ -11,16 +11,10 @@ class SettingsView(ft.Column):
         self.schedule = schedule
         self.change_screen = change_screen_func
 
-        # --- Helper Functions (Local scope to prevent attribute errors) ---
-        
         def show_snackbar(message):
             self.app_page.snack_bar = ft.SnackBar(ft.Text(message, color="onPrimary"), bgcolor="primary")
             self.app_page.snack_bar.open = True
             self.app_page.update()
-
-        def save_server_url(e):
-            self.schedule.server_url = e.control.value
-            self.schedule.save_to_file()
 
         def recalc_all():
             if self.schedule.is_semester_set():
@@ -47,13 +41,10 @@ class SettingsView(ft.Column):
             except Exception:
                 pass
 
-        # --- Data Export/Import Functions (Fixed for Flet 0.82+) ---
-        
         async def export_data(e):
             try:
-                # בגרסה החדשה FilePicker מופעל ישירות כשירות
                 picker = ft.FilePicker()
-                result = await picker.save_file(
+                result = await picker.save_file_async(
                     dialog_title=t("settings.export_dialog_title", default="שמור קובץ מערכת שעות"),
                     file_name="my_schedule_data.json",
                     file_type=ft.FilePickerFileType.CUSTOM,
@@ -72,7 +63,7 @@ class SettingsView(ft.Column):
         async def import_data(e):
             try:
                 picker = ft.FilePicker()
-                result = await picker.pick_files(
+                result = await picker.pick_files_async(
                     dialog_title=t("settings.import_dialog_title", default="בחר קובץ מערכת שעות לטעינה"),
                     file_type=ft.FilePickerFileType.CUSTOM,
                     allowed_extensions=["json"]
@@ -93,8 +84,6 @@ class SettingsView(ft.Column):
             except Exception as ex:
                 show_snackbar(f"{t('settings.import_error', default='שגיאה בטעינה: ')}{str(ex)}")
 
-        # --- Language Switcher ---
-        
         def set_language(lang):
             if self.schedule.language == lang: return
             self.schedule.language = lang
@@ -127,8 +116,6 @@ class SettingsView(ft.Column):
             ft.Row([self.lang_he_btn, self.lang_en_btn], spacing=10)
         ])
 
-        # --- Display Settings ---
-        
         self.weekend_switch = ft.Switch(
             label=t("settings.show_weekend", default="Show Weekend"),
             value=self.schedule.show_weekend,
@@ -141,8 +128,6 @@ class SettingsView(ft.Column):
             on_change=toggle_numbers
         )
 
-        # --- Date Picker Logic ---
-        
         def pick_date(e, is_start):
             def handle_change(ev):
                 val = ev.control.value
@@ -170,7 +155,7 @@ class SettingsView(ft.Column):
 
         self.start_text = ft.Text("")
         self.end_text = ft.Text("")
-        update_date_texts() # Initial call to set dates
+        update_date_texts() 
 
         date_section = ft.Column([
             ft.Text(t("settings.dates", default="Semester Dates:"), weight="bold", size=16),
@@ -190,32 +175,22 @@ class SettingsView(ft.Column):
             ])
         ], spacing=10)
 
-        # --- Data Management & Sync Section ---
-        
-        self.server_input = ft.TextField(
-            label="Firebase Database URI",
-            hint_text="https://your-db.firebasedatabase.app/",
-            value=self.schedule.server_url,
-            on_blur=save_server_url,
-            icon="sync"
-        )
-
         def pull_from_server(e):
-            if not self.schedule.server_url:
-                show_snackbar("Please configure Firebase URL first")
-                return
-            show_snackbar("Syncing from server...")
+            show_snackbar("מושך נתונים מהענן...")
             success, msg = self.schedule.pull_from_server()
             show_snackbar(msg)
             if success:
-                self.change_screen("schedule") # Refresh UI after sync
+                self.change_screen("schedule")
+
+        def logout_user(e):
+            self.app_page.logout()
+            self.change_screen("login")
 
         sync_section = ft.Column([
-            ft.Text(t("settings.data_management", default="Data Management & Sync:"), weight="bold", size=16),
-            self.server_input,
+            ft.Text(t("settings.data_management", default="ניהול נתונים בענן:"), weight="bold", size=16),
             ft.Row([
                 ft.ElevatedButton(
-                    content=ft.Row([ft.Image(src="icons/cloud_download.svg", width=18, height=18, color="onPrimary"), ft.Text("Pull from server (Sync)", color="onPrimary")]),
+                    content=ft.Row([ft.Image(src="icons/cloud_download.svg", width=18, height=18, color="onPrimary"), ft.Text("סנכרן נתונים עכשיו", color="onPrimary")]),
                     bgcolor="primary",
                     on_click=pull_from_server
                 )
@@ -234,11 +209,16 @@ class SettingsView(ft.Column):
                     on_click=import_data
                 )
             ]),
-            ft.Text(t("settings.import_warning", default="* Note: Importing will replace local data."), size=12, color="onSurfaceVariant")
+            ft.Divider(height=20, color="outlineVariant"),
+            ft.ElevatedButton(
+                # שימוש ב-icon במקום ב-name!
+                content=ft.Row([ft.Icon(icon=ft.Icons.LOGOUT, color="onError"), ft.Text("התנתק מהמערכת", color="onError")], alignment=ft.MainAxisAlignment.CENTER),
+                bgcolor="errorContainer",
+                on_click=logout_user,
+                width=200
+            ),
         ], spacing=10)
 
-        # --- Header Design ---
-        
         header = ft.Container(
             content=ft.Row([
                 ft.TextButton(content=ft.Row([ft.Image(src="icons/arrow_forward.svg", width=18, height=18, color="onPrimary"), ft.Text(t("common.back"), color="onPrimary", weight="bold")]), on_click=lambda _: self.change_screen("schedule")),

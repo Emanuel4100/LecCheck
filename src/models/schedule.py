@@ -6,148 +6,138 @@ from datetime import datetime
 from models.course import Course
 from utils.i18n import translator
 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# חובה לשים כאן את כתובת ה-Firebase האמיתית שלך!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+FIREBASE_URL = "https://leccheck-db-default-rtdb.europe-west1.firebasedatabase.app"
+
 class SemesterSchedule:
-    def __init__(self, data_file="schedule_data.json"):
-        self.data_file = data_file
+    def __init__(self, page=None):
+        self.page = page  
+        self.user_id = None 
+        self.data_file = "my_schedule_data.json"
+        
+        self.language = "he"
         self.semester_start = None
         self.semester_end = None
-        self.courses = []
-        self.language = "he"
         self.show_weekend = False
         self.enable_meeting_numbers = True
-        self.server_url = "" # Self-hosted server URL (e.g., https://lec.emulab.space)
+        self.courses = []
 
-    def to_dict(self):
-        return {
-            "semester_start": self.semester_start.strftime("%Y-%m-%d") if self.semester_start else None,
-            "semester_end": self.semester_end.strftime("%Y-%m-%d") if self.semester_end else None,
-            "language": self.language,
-            "show_weekend": self.show_weekend,
-            "enable_meeting_numbers": self.enable_meeting_numbers,
-            "server_url": self.server_url,
-            "courses": [c.to_dict() for c in self.courses]
-        }
-    
+    def set_user(self, user_id):
+        self.user_id = user_id
+
     def set_semester(self, start_val, end_val):
-        """ Parse and set the semester dates from the onboarding view """
         def parse_date(d):
             if not d: return None
             if hasattr(d, 'date'): return d.date()
             if isinstance(d, str):
-                try: 
-                    return datetime.strptime(d, "%d/%m/%Y").date()
-                except ValueError: 
-                    pass
-                try: 
-                    return datetime.strptime(d[:10], "%Y-%m-%d").date()
-                except ValueError: 
-                    return None
+                try: return datetime.strptime(d, "%d/%m/%Y").date()
+                except ValueError: pass
+                try: return datetime.strptime(d[:10], "%Y-%m-%d").date()
+                except ValueError: return None
             return d
             
         self.semester_start = parse_date(start_val)
         self.semester_end = parse_date(end_val)
         self.save_to_file()
 
+    def add_course(self, course):
+        self.courses.append(course)
+        self.save_to_file()
+
+    def remove_course(self, course_id):
+        self.courses = [c for c in self.courses if c.id != course_id]
+        self.save_to_file()
+
+    def is_semester_set(self):
+        return self.semester_start is not None and self.semester_end is not None
+
+    def to_dict(self):
+        return {
+            "language": self.language,
+            "semester_start": self.semester_start.strftime("%Y-%m-%d") if self.semester_start else None,
+            "semester_end": self.semester_end.strftime("%Y-%m-%d") if self.semester_end else None,
+            "show_weekend": self.show_weekend,
+            "enable_meeting_numbers": self.enable_meeting_numbers,
+            "courses": [c.to_dict() for c in self.courses]
+        }
+
+    def from_dict(self, data):
+        if not data: return
+        self.language = data.get("language", "he")
+        start_str = data.get("semester_start")
+        end_str = data.get("semester_end")
+        self.semester_start = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else None
+        self.semester_end = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else None
+        self.show_weekend = data.get("show_weekend", False)
+        self.enable_meeting_numbers = data.get("enable_meeting_numbers", True)
+        
+        translator.set_language(self.language)
+        
+        self.courses = []
+        for c_data in data.get("courses", []):
+            course = Course.from_dict(c_data)
+            if not course.lectures and course.meetings and self.semester_start and self.semester_end:
+                course.recalculate_all_lectures(self.semester_start, self.semester_end, self.enable_meeting_numbers)
+            self.courses.append(course)
+
     def save_to_file(self):
-        """ Saves data locally (Offline First) and pushes to the server in the background. """
+        """שומר נתונים כפליים: גם כגיבוי מקומי על המחשב, וגם בענן"""
+        data = self.to_dict()
+        
+        # 1. תמיד שומר עותק מקומי (מונע מחיקת נתונים)
         try:
             with open(self.data_file, 'w', encoding='utf-8') as f:
-                json.dump(self.to_dict(), f, ensure_ascii=False, indent=4)
+                json.dump(data, f, ensure_ascii=False, indent=4)
         except Exception as e:
-            print(f"Error saving local file: {e}")
-
-        # Push to server in a background thread if URL is configured
-        if self.server_url:
+            print(f"Error saving to local file: {e}")
+            
+        # 2. אם מחובר לגוגל - דוחף גם ל-Firebase ברקע
+        if self.user_id:
             threading.Thread(target=self._push_to_server, daemon=True).start()
 
-    def _push_to_server(self):
-        """ Background task to push data to Firebase Realtime Database. """
+    async def load_from_file(self):
+        """טוען את הנתונים מהגיבוי המקומי"""
         try:
-            base_url = self.server_url.rstrip('/')
-            # Firebase REST API requires .json at the end of the endpoint
-            firebase_endpoint = f"{base_url}/schedule.json"
-            
-            # Using PUT in Firebase overwrites the exact path with the new JSON
-            response = requests.put(firebase_endpoint, json=self.to_dict(), timeout=5)
-            
-            if response.status_code == 200:
-                print("Successfully pushed data to Firebase.")
-            else:
-                print(f"Firebase error: {response.text}")
+            if os.path.exists(self.data_file):
+                with open(self.data_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.from_dict(data)
+                    return True
         except Exception as e:
-            print(f"Failed to push to server (Offline?): {e}")
+            print(f"Error loading from local file: {e}")
+        return False
+
+    def _push_to_server(self):
+        if not self.user_id: return
+        try:
+            endpoint = f"{FIREBASE_URL}/users/{self.user_id}/schedule.json"
+            requests.put(endpoint, json=self.to_dict(), timeout=5)
+        except Exception as e:
+            print(f"Failed to push to Firebase: {e}")
 
     def pull_from_server(self):
-        """ Pulls data from Firebase and overwrites local storage. """
-        if not self.server_url:
-            return False, "Server URL not configured"
+        if not self.user_id:
+            return False, "Not logged in"
         try:
-            base_url = self.server_url.rstrip('/')
-            firebase_endpoint = f"{base_url}/schedule.json"
-            
-            response = requests.get(firebase_endpoint, timeout=5)
+            endpoint = f"{FIREBASE_URL}/users/{self.user_id}/schedule.json"
+            response = requests.get(endpoint, timeout=5)
             
             if response.status_code == 200:
                 data = response.json()
-                
-                # Firebase returns None (null) if the database is entirely empty
                 if data is None:
-                    return False, "No data on Firebase yet"
+                    return False, "לא נמצאו נתונים בענן למשתמש זה."
                 
-                # Overwrite local file with Firebase data
+                self.from_dict(data)
                 with open(self.data_file, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-                
-                # Reload system state
-                self.load_from_file()
-                return True, "Sync from Firebase completed successfully!"
+                    json.dump(self.to_dict(), f, ensure_ascii=False, indent=4)
+                    
+                return True, "הנתונים סונכרנו בהצלחה מהענן!"
             else:
                 return False, f"Firebase error: {response.status_code}"
         except Exception as e:
-            return False, f"Communication error: {e}"
-
-    def load_from_file(self):
-        if not os.path.exists(self.data_file):
-            return False
-        try:
-            with open(self.data_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-            self.semester_start = self._safe_parse_date(data.get("semester_start"))
-            self.semester_end = self._safe_parse_date(data.get("semester_end"))
-            self.language = data.get("language", "he")
-            self.show_weekend = data.get("show_weekend", False)
-            self.enable_meeting_numbers = data.get("enable_meeting_numbers", True)
-            self.server_url = data.get("server_url", "") 
-            translator.set_language(self.language)
-            
-            self.courses = []
-            for c_data in data.get("courses", []):
-                course = Course.from_dict(c_data)
-                
-                # Auto-populate lectures if missing but meetings are defined
-                if not course.lectures and course.meetings and self.semester_start and self.semester_end:
-                    course.recalculate_all_lectures(self.semester_start, self.semester_end, self.enable_meeting_numbers)
-                
-                self.courses.append(course)
-                
-            self.save_to_file()
-            return True
-            
-        except Exception as e:
-            print(f"Error loading data: {e}")
-            return False
-
-    def _safe_parse_date(self, date_str):
-        if not date_str:
-            return None
-        try:
-            return datetime.strptime(date_str, "%Y-%m-%d").date()
-        except:
-            return None
-
-    def is_semester_set(self):
-        return bool(self.semester_start and self.semester_end)
+            return False, f"שגיאת תקשורת: {e}"
 
     def get_all_lectures(self):
         all_lecs = []
@@ -156,7 +146,6 @@ class SemesterSchedule:
         return all_lecs
 
     def get_weekly_lectures(self, start_date, end_date):
-        """ Fetch lectures falling within a specific week """
         weekly_lecs = []
         for lec in self.get_all_lectures():
             if lec.date_obj and start_date <= lec.date_obj <= end_date:
@@ -164,18 +153,14 @@ class SemesterSchedule:
         return weekly_lecs
 
     def get_categorized_lectures(self):
-        """ Smart categorization of lectures by date and specific time. """
         now = datetime.now()
         today = now.date()
         current_time = now.time()
-        
         all_lecs = self.get_all_lectures()
-        
         pending, future, past = [], [], []
         for l in all_lecs:
             if not l.date_obj:
                 continue
-                
             if l.status == "status.needs_watching" and l.date_obj <= today:
                 pending.append(l)
             else:
@@ -195,5 +180,4 @@ class SemesterSchedule:
                             past.append(l)
                     else:
                         past.append(l)
-                        
         return pending, future, past
