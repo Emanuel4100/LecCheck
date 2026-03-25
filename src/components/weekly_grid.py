@@ -28,12 +28,17 @@ class WeeklyGrid(ft.Column):
         return h * 60 + m
 
     def update_grid(self):
+        # Calculate the current week's Sunday and Saturday dates
         target_date = datetime.now().date() + timedelta(days=7 * self.current_week_offset)
-        lectures = self.schedule.get_weekly_lectures(target_date)
-        day_keys = ["days.sunday", "days.monday", "days.tuesday", "days.wednesday", "days.thursday", "days.friday", "days.saturday"]
-        days_to_show = 7 if self.schedule.show_weekend else 5
         idx = (target_date.weekday() + 1) % 7
         sun = target_date - timedelta(days=idx)
+        sat = sun + timedelta(days=6)
+        
+        # Fetch lectures using both start_date and end_date
+        lectures = self.schedule.get_weekly_lectures(sun, sat)
+        
+        day_keys = ["days.sunday", "days.monday", "days.tuesday", "days.wednesday", "days.thursday", "days.friday", "days.saturday"]
+        days_to_show = 7 if self.schedule.show_weekend else 5
 
         prev_icon = "arrow_forward.svg" if self.schedule.language == "he" else "arrow_back.svg"
         next_icon = "arrow_back.svg" if self.schedule.language == "he" else "arrow_forward.svg"
@@ -73,7 +78,7 @@ class WeeklyGrid(ft.Column):
 
             day_lecs = [l for l in lectures if l.date_obj == current_day_date and l.start_time and l.end_time]
             
-            # --- Optimization: Sort once O(N log N) instead of O(N^2) nested loops ---
+            # Sort once O(N log N) instead of O(N^2) nested loops
             day_lecs.sort(key=lambda l: self.time_to_minutes(l.start_time))
             
             for index, lec in enumerate(day_lecs):
@@ -93,7 +98,6 @@ class WeeklyGrid(ft.Column):
                     next_start = self.time_to_minutes(day_lecs[index + 1].start_time)
                     if next_start < lec_end_m:
                         is_overlapping = True
-                # -----------------------------------------------------------------------
                 
                 top_pos = max(0, (lec_start_m - START_HOUR * 60) * SCALE)
                 height = max(30, (lec_end_m - lec_start_m) * SCALE)

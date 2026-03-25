@@ -1,1 +1,3 @@
-flet
+flet[fastapi]
+requests
+uvicorn

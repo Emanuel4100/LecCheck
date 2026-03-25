@@ -165,3 +165,5 @@ storage/
 
 # App local data
 schedule_data.json
+
+.env
