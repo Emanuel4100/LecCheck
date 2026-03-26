@@ -1,6 +1,6 @@
 import flet as ft
 from flet.auth.providers.google_oauth_provider import GoogleOAuthProvider
-
+import os
 from models.schedule import SemesterSchedule
 from views.onboarding_view import OnboardingView
 from views.schedule_view import ScheduleView
@@ -19,8 +19,8 @@ async def main(page: ft.Page):
     
     provider = GoogleOAuthProvider(
         client_id="655164797100-mflosfct1l1s02qe19d4dluejflrhr3h.apps.googleusercontent.com",
-        client_secret="", 
-        redirect_url="https://Emanuel4100.github.io/LecCheck/oauth_callback",
+        client_secret=os.getenv("GOOGLE_CLIENT_SECRET", ""), # ייקח את הסוד מהשרת (ויישאר ריק ב-APK)
+        redirect_url=os.getenv("REDIRECT_URL", "http://localhost:8550/oauth_callback"),
     )
     
     my_schedule = SemesterSchedule(page=page)
@@ -87,4 +87,5 @@ async def main(page: ft.Page):
         change_screen("login")
 
 if __name__ == "__main__":
-    ft.run(main, port=8550, view=ft.AppView.WEB_BROWSER, assets_dir="assets")
+    port = int(os.getenv("PORT", 8550))
+    ft.run(main, port=port, host="0.0.0.0", view=ft.AppView.WEB_BROWSER, assets_dir="assets")
