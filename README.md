@@ -1,4 +1,3 @@
-```markdown
 # 🎓 LecCheck - Lecture Tracker
 
 [![Web Version](https://img.shields.io/badge/Web_Version-Live-success?style=for-the-badge&logo=google-chrome)](https://emanuel4100.github.io/LecCheck/)
