@@ -42,7 +42,7 @@ class Course:
                 ext_link = ""
                 custom_duration = None
                 
-                # [תיקון] שליפת נתונים ידניים שנשמרו בעריכה
+                # שליפת נתונים ידניים שנשמרו בעריכה
                 if preserved_data and (date_str, rule["start_time"]) in preserved_data:
                     saved = preserved_data[(date_str, rule["start_time"])]
                     status = saved.get("status", LectureStatus.NEEDS_WATCHING)
@@ -80,12 +80,14 @@ class Course:
     def recalculate_all_lectures(self, new_start, new_end, enable_numbers=True):
         preserved_data = {}
         
-        one_off_lectures = [l for l in self.lectures if l.is_one_off]
+        # שימוש ב-getattr כדי למנוע קריסה אם התכונה חסרה בקורסים ישנים
+        one_off_lectures = [l for l in self.lectures if getattr(l, 'is_one_off', False)]
         
         for lec in self.lectures:
-            if not lec.is_one_off:
-                # [תיקון] שמירת זמן המפגש הידני כדי למנוע דריסה
-                preserved_data[(lec.date_str, lec.start_time)] = {
+            if not getattr(lec, 'is_one_off', False):
+                # יצירת מחרוזת תאריך בצורה בטוחה מתוך אובייקט התאריך
+                date_key = lec.date_obj.strftime("%d/%m/%Y") if lec.date_obj else ""
+                preserved_data[(date_key, lec.start_time)] = {
                     "status": lec.status,
                     "link": lec.external_link,
                     "duration_mins": lec.duration_mins
@@ -101,7 +103,7 @@ class Course:
         if enable_numbers:
             counters = {}
             for lec in self.lectures:
-                if not lec.is_one_off:
+                if not getattr(lec, 'is_one_off', False):
                     base_title = lec.title
                     counters[base_title] = counters.get(base_title, 0) + 1
                     lec.meeting_number = counters[base_title]
