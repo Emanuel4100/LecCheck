@@ -72,26 +72,42 @@ async def main(page: ft.Page):
                 change_screen("onboarding")
 
         async def on_login(e):
-            if e and getattr(e, "error", None):
-                page.snack_bar = ft.SnackBar(ft.Text(f"שגיאת התחברות: {e.error}"))
+            try:
+                if e and getattr(e, "error", None):
+                    page.snack_bar = ft.SnackBar(ft.Text(f"שגיאת התחברות: {e.error}"), bgcolor="red")
+                    page.snack_bar.open = True
+                    page.update()
+                else:
+                    user_id = page.auth.user.id
+                    
+                    # חיווי חזותי שההתחברות מגוגל הצליחה!
+                    page.snack_bar = ft.SnackBar(ft.Text(f"התחברת בהצלחה! שואב נתונים מהענן..."), bgcolor="green")
+                    page.snack_bar.open = True
+                    page.update()
+                    
+                    my_schedule.set_user(user_id)
+                    success, msg = my_schedule.pull_from_server()
+                    
+                    if not success:
+                        print(f"Server pull failed: {msg}")
+                        if inspect.iscoroutinefunction(my_schedule.load_from_file):
+                            await my_schedule.load_from_file()
+                        else:
+                            my_schedule.load_from_file()
+                        
+                    if my_schedule.is_semester_set():
+                        page.rtl = (my_schedule.language == "he")
+                        change_screen("schedule")
+                    else:
+                        page.snack_bar = ft.SnackBar(ft.Text("לא נמצאה מערכת. מעביר להגדרת סמסטר חדש..."), bgcolor="blue")
+                        page.snack_bar.open = True
+                        page.update()
+                        change_screen("onboarding")
+            except Exception as ex:
+                page.snack_bar = ft.SnackBar(ft.Text(f"קריסה פנימית באפליקציה: {ex}"), bgcolor="red")
                 page.snack_bar.open = True
                 page.update()
-            else:
-                user_id = page.auth.user.id
-                my_schedule.set_user(user_id)
-                success, msg = my_schedule.pull_from_server()
-                
-                if not success:
-                    if inspect.iscoroutinefunction(my_schedule.load_from_file):
-                        await my_schedule.load_from_file()
-                    else:
-                        my_schedule.load_from_file()
-                    
-                if my_schedule.is_semester_set():
-                    page.rtl = (my_schedule.language == "he")
-                    change_screen("schedule")
-                else:
-                    change_screen("onboarding")
+                print(traceback.format_exc())
 
         page.on_login = on_login
 
