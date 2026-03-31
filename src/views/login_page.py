@@ -1,4 +1,5 @@
 import flet as ft
+import inspect
 
 class LoginView(ft.Column):
     def __init__(self, page: ft.Page, provider, change_screen_func, on_guest_login_func):
@@ -10,14 +11,11 @@ class LoginView(ft.Column):
 
         async def handle_google_login(e):
             try:
-                self.app_page.snack_bar = ft.SnackBar(ft.Text("פותח חלון התחברות..."))
-                self.app_page.snack_bar.open = True
-                self.app_page.update()
+                result = self.app_page.login(self.provider)
                 
-                if hasattr(self.app_page, "login_async"):
-                    await self.app_page.login_async(self.provider)
-                else:
-                    self.app_page.login(self.provider)
+                if inspect.iscoroutine(result):
+                    await result
+                    
             except Exception as ex:
                 print(f"Login error: {ex}")
 
