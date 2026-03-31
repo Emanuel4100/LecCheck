@@ -167,3 +167,4 @@ storage/
 schedule_data.json
 
 .env
+test.py

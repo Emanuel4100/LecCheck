@@ -8,9 +8,18 @@ class LoginView(ft.Column):
         self.change_screen = change_screen_func
         self.on_guest_login = on_guest_login_func
 
-        # פונקציות אסינכרוניות כנדרש להתחברות
         async def handle_google_login(e):
-            await self.app_page.login(self.provider)
+            try:
+                self.app_page.snack_bar = ft.SnackBar(ft.Text("פותח חלון התחברות..."))
+                self.app_page.snack_bar.open = True
+                self.app_page.update()
+                
+                if hasattr(self.app_page, "login_async"):
+                    await self.app_page.login_async(self.provider)
+                else:
+                    self.app_page.login(self.provider)
+            except Exception as ex:
+                print(f"Login error: {ex}")
 
         async def handle_guest_login(e):
             await self.on_guest_login()
@@ -34,7 +43,7 @@ class LoginView(ft.Column):
                     elevation=2
                 ),
                 width=320,
-                on_click=handle_google_login # קריאה ישירה לפונקציה
+                on_click=handle_google_login
             ),
             
             ft.Container(height=10),
