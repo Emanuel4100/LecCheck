@@ -176,3 +176,10 @@ local.properties
 *.iml
 .idea/
 androidApp/.cxx/
+
+# Flutter / Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/pubspec.lock

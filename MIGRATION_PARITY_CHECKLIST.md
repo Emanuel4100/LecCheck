@@ -1,6 +1,6 @@
 # LecCheck Migration Parity Checklist
 
-This checklist maps current Python/Flet behavior to the new Kotlin stack so we can verify functional parity during migration.
+This checklist maps current Python/Flet behavior to the new Flutter stack so we can verify functional and visual parity during migration.
 
 ## Current behavior inventory
 
@@ -21,40 +21,45 @@ This checklist maps current Python/Flet behavior to the new Kotlin stack so we c
   - Static web output for GitHub Pages.
   - Python container for Cloud Run auth/backend role.
 
-## Kotlin target parity checks
+## Flutter target parity checks
 
 ## 1) Authentication
-- [ ] Backend exposes OAuth start/redirect/callback-compatible flow.
-- [ ] Supports configured redirect URL and Google client credentials via env vars.
-- [ ] Returns a stable authenticated user identity to web and android clients.
+- [ ] Flutter web login launches OAuth-compatible flow.
+- [ ] Config values are externally configurable (without hardcoding secrets).
+- [ ] Authenticated user identity is resolved consistently across web/android/linux.
 
 ## 2) Firebase sync compatibility
 - [ ] Read schedule from `/users/{user_id}/schedule.json`.
 - [ ] Write schedule to `/users/{user_id}/schedule.json`.
-- [ ] Keep JSON shape backward-compatible with existing Python payload.
+- [ ] Keep JSON shape backward-compatible with existing Python payloads.
 
 ## 3) Guest/local mode
-- [ ] Android supports local-only mode without login.
+- [ ] App supports local-only mode without login.
 - [ ] Local schedule storage available for offline use.
 
 ## 4) Schedule domain parity
 - [ ] Semester start/end saved and restored.
-- [ ] Course + meeting rules represented in Kotlin models.
+- [ ] Course + meeting rules represented in Dart models.
 - [ ] Lecture generation behavior preserved for weekly rules.
 - [ ] One-off task/event creation preserved.
 - [ ] Lecture status values mapped without regressions.
 
 ## 5) Web parity
-- [ ] Login + schedule sync work in browser.
+- [ ] Login + schedule sync work in browser (Brave/Chrome/Chromium).
 - [ ] RTL (Hebrew) rendering behavior preserved.
-- [ ] Basic schedule UI view available.
+- [ ] Main schedule UI view matches OG spacing and hierarchy.
 
 ## 6) Android parity
 - [ ] Login + schedule sync functional.
 - [ ] Core schedule list rendering functional.
-- [ ] Non-blocking network calls (coroutines) preserve UI responsiveness.
+- [ ] Smooth interaction and transitions (no visible jank on common devices).
 
-## 7) Deployment parity
-- [ ] Backend deploys to Cloud Run using Kotlin image.
-- [ ] Web deploys to static hosting.
-- [ ] Updated docs include Kotlin commands and env vars.
+## 7) Linux desktop parity
+- [ ] App starts and renders correctly on Linux desktop.
+- [ ] Core schedule actions work in Linux target.
+
+## 8) Deployment parity
+- [ ] Web build output deploys to static hosting.
+- [ ] Android build pipeline produces debug/release artifacts.
+- [ ] Linux build pipeline produces runnable artifacts.
+- [ ] Updated docs include Flutter commands and target-specific notes.

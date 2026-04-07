@@ -18,7 +18,7 @@
 - Weekly navigation controls present.
 
 ## Lectures + Stats + Settings
-- Tab switching works on web and Android.
+- Tab switching works on web, Android, and Linux.
 - Empty states are present.
 - Basic card layout matches legacy proportions.
 
@@ -26,7 +26,7 @@
 - Hebrew strings render correctly.
 - Layout direction remains readable for Hebrew.
 
-## Backend Integration
-- `/health` returns `ok`.
-- Session route can resolve current user.
-- Web login redirect still opens OAuth endpoint.
+## Platform Verification
+- Web runs on Brave/Chrome/Chromium without device-detection issues.
+- Android run works on emulator or connected device.
+- Linux desktop run works without layout breakage.

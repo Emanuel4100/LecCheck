@@ -2,29 +2,30 @@
 
 ## Scope
 - New UI targets:
-  - `webApp` Kotlin/JS
-  - `androidApp` Jetpack Compose
-- Backend stays on `backend` Ktor service.
+  - `flutter_app` web
+  - `flutter_app` Android
+  - `flutter_app` Linux desktop
 - Legacy Python/Flet UI remains in `src` until final sign-off.
 
 ## Pre-cutover checks
-1. Run backend and verify `http://localhost:8080/health`.
-2. Run `gradle :backend:build` and `gradle :backend:test`.
-3. Run `gradle :webApp:browserDevelopmentRun` and complete QA checklist.
-4. Build Android debug app and complete QA checklist.
+1. Run `flutter doctor` and verify Flutter/Android/Web setup.
+2. Run `cd flutter_app && flutter analyze`.
+3. Run `./run-dev.sh chrome` and complete QA checklist.
+4. Run `./run-dev.sh android` and complete QA checklist.
+5. Run `./run-dev.sh linux` and complete QA checklist.
 
 ## Cutover steps
-1. Deploy backend image from Kotlin code path.
-2. Deploy web static bundle from `webApp`.
-3. Distribute Android build from `androidApp`.
+1. Deploy web static bundle from `flutter_app` (`flutter build web`).
+2. Distribute Android build from `flutter_app` (`flutter build apk` or `appbundle`).
+3. Provide Linux build artifact from `flutter_app` (`flutter build linux`).
 4. Keep `src` read-only during stabilization window.
 
 ## Stabilization window
-- Monitor auth callback success.
-- Monitor schedule read/write success.
+- Monitor login and onboarding completion rates.
+- Monitor schedule create/edit/status flows.
 - Validate no RTL regressions reported by users.
 
 ## Legacy decommission criteria
 - All parity checklist items pass.
 - No blocking regressions for one release cycle.
-- Docs and onboarding instructions updated to Kotlin flows.
+- Docs and onboarding instructions updated to Flutter flows.

@@ -1,123 +1,95 @@
 # LecCheck
 
-LecCheck is a lecture tracking app for web and Android.  
-This repository is currently in migration from legacy Python/Flet to a Kotlin stack.
+LecCheck is a lecture tracking app rebuilt with Flutter (Dart) for high visual parity with the original app.
 
-## What the app does
+## Stack
 
-- Track semester schedule (courses, meetings, lecture sessions)
-- Sign in with Google OAuth
-- Sync schedule data with Firebase Realtime Database
-- Support Hebrew and English UI (including RTL flow)
-- Support guest/local mode (no login)
+- Flutter + Dart (Material 3)
+- Targets: Web, Android, Linux desktop
+- Legacy Python/Flet code remains in `src` as migration reference
 
-## Current project structure
+## Project structure
 
-- `backend` - Kotlin + Ktor backend (OAuth + schedule API)
-- `webApp` - Kotlin/JS web client
-- `androidApp` - Jetpack Compose Android app
-- `shared` - shared Kotlin models and UI contracts
-- `src` - legacy Python/Flet implementation (reference during migration)
+- `flutter_app` - active Flutter application
+- `src` - original Python/Flet implementation (reference)
+- `ARCHITECTURE.md` - current Flutter architecture notes
+- `run-dev.sh` - helper script to run Flutter quickly
 
-## How it works
+## Current features
 
-### Auth flow
+- Login shell (Google button placeholder + guest mode)
+- Onboarding flow (language and semester range setup)
+- Dashboard for lecture tracking
+  - Day selector
+  - List/grid toggle
+  - Attendance progress
+  - Lecture status update (attended/missed/canceled)
+- Settings view (language info, reset semester, logout)
+- Shared in-memory schedule domain models:
+  - semester, course, meeting, lecture
 
-1. Web app redirects to `GET /api/oauth/redirect`
-2. Google redirects back to `GET /api/oauth/callback`
-3. Backend exchanges code for token and fetches user info
-4. Backend creates short-lived in-memory session and redirects web client with `session_id`
-5. Web client calls `GET /api/auth/session/{sessionId}` to resolve logged-in user
+## Prerequisites
 
-### Data flow
-
-- Schedule data is stored in Firebase at:
-  - `/users/{user_id}/schedule.json`
-- Backend exposes read/write API:
-  - `GET /api/users/{userId}/schedule`
-  - `PUT /api/users/{userId}/schedule`
-
-## Features status
-
-- Backend API: working (`/health`, OAuth routes, schedule routes)
-- Web app:
-  - Login screen + language files (`webApp/src/main/resources/locales`)
-  - Guest mode button wired
-  - Basic schedule shell/tabs implemented
-  - Ongoing UI parity work vs legacy Flet app
-- Android app:
-  - Compose shell and initial screens implemented
-  - Ongoing UI parity work vs legacy app
-
-## Backend environment variables
-
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `REDIRECT_URL` (example: `http://localhost:8080/api/oauth/callback`)
-- `FRONTEND_URL` (example: `http://localhost:8081`)
-- `FIREBASE_URL` (optional, defaults to LecCheck Firebase URL)
+- Flutter SDK installed (recommended path: `~/development/flutter`)
+- Android SDK for Android builds
+- Chrome or Chromium for web runs
+- Linux build dependencies for Linux target (`clang`, `cmake`, `ninja`, `gtk3-devel`)
 
 ## Run locally
 
-Prerequisites:
-- JDK 21 installed
-- Gradle available on your PATH
-
-Optional recommended environment setup:
+### Web
 
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
-export PATH="$JAVA_HOME/bin:$PATH"
+cd flutter_app
+flutter run -d chrome
 ```
 
-### 1) Run backend
+### Android
 
 ```bash
-gradle :backend:run
+cd flutter_app
+flutter run -d android
 ```
 
-Verify:
+### Linux
 
 ```bash
-curl http://localhost:8080/health
+cd flutter_app
+flutter run -d linux
 ```
 
-Expected response: `ok`
+### One command helper
 
-### 2) Run web app
-
-In a second terminal:
+From repo root:
 
 ```bash
-gradle :webApp:browserDevelopmentRun
+./run-dev.sh chrome
 ```
 
-Open the URL printed by Gradle (usually `http://localhost:8081`).
-
-### 3) Build Android app
+Or:
 
 ```bash
-gradle :androidApp:assembleDebug
+./run-dev.sh android
+./run-dev.sh linux
 ```
 
-## Common notes
+You can also override Flutter binary path:
 
-- `:backend:run` stays running at high progress in Gradle. That is expected for a server task.
-- You may see a warning that `kotlin-js` plugin is deprecated; this is non-blocking and planned for migration to multiplatform JS target.
-- If Gradle reports cache lock issues, run `gradle --stop` and retry.
+```bash
+FLUTTER_BIN=~/development/flutter/bin/flutter ./run-dev.sh chrome
+```
 
-## API endpoints
+## Build artifacts
 
-- `GET /health`
-- `GET /api/oauth/redirect`
-- `GET /api/oauth/callback?code=...`
-- `GET /api/auth/session/{sessionId}`
-- `GET /api/users/{userId}/schedule`
-- `PUT /api/users/{userId}/schedule`
+```bash
+cd flutter_app
+flutter build web
+flutter build apk
+flutter build linux
+```
 
-## Documentation
+## Next migration milestones
 
-- `ARCHITECTURE.md`
-- `MIGRATION_PARITY_CHECKLIST.md`
-- `docs/PARITY_QA_CHECKLIST.md`
-- `docs/CUTOVER_RUNBOOK.md`
+- Reconnect Firebase + OAuth flows from OG app behavior
+- Complete icon/layout parity per screen
+- Add persistent local/cloud storage and sync conflict handling
