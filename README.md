@@ -36,6 +36,57 @@ LecCheck is a lecture tracking app rebuilt with Flutter (Dart) for high visual p
 - Chrome or Chromium for web runs
 - Linux build dependencies for Linux target (`clang`, `cmake`, `ninja`, `gtk3-devel`)
 
+## Continue Development On Another Computer
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/Emanuel4100/LecCheck.git
+cd LecCheck
+```
+
+2. Install Flutter and verify setup:
+
+```bash
+flutter --version
+flutter doctor
+```
+
+3. Install project dependencies:
+
+```bash
+cd flutter_app
+flutter pub get
+```
+
+4. Run the app:
+
+```bash
+# Web
+flutter run -d chrome
+
+# Android
+flutter run -d android
+```
+
+If your machine uses Brave instead of Chrome:
+
+```bash
+export CHROME_EXECUTABLE=/usr/bin/brave-browser
+```
+
+Then run either:
+
+```bash
+./run-dev.sh chrome
+```
+
+or:
+
+```bash
+cd flutter_app && flutter run -d chrome
+```
+
 ## Run locally
 
 ### Web
