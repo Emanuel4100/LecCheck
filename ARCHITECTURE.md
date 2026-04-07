@@ -1,50 +1,72 @@
-# LecCheck - System Architecture & Developer Guide 🏗️
+# LecCheck - Kotlin Architecture and Deployment
 
-This document outlines the technical architecture of the application, servers, and deployment processes to facilitate future maintenance and updates.
+This document tracks the post-migration architecture from Python/Flet into Kotlin across backend, web, and Android.
 
-## 🌟 System Architecture
-The system is split into 3 distinct environments to allow full support for both Web and Mobile simultaneously, utilizing free services from Google and GitHub.
+## System architecture
 
-### 1. Client Side - Browser (Frontend Web)
-* **Hosting:** GitHub Pages (Free, static site).
-* **URL:** `https://emanuel4100.github.io/LecCheck/`
-* **How it works:** The Flet engine compiles the Python code into WebAssembly alongside static HTML/JS files. There is no active Python server running in the background here!
-* **Limitations:** WebAssembly in the browser does not support libraries like `requests` or `threading`. Therefore, saving data to Firebase is executed as natively as possible using `urllib`.
+### 1) Backend/Auth service (`backend`)
+- Runtime: Kotlin + Ktor (JVM).
+- Hosting target: Google Cloud Run (containerized).
+- Responsibilities:
+  - Google OAuth redirect and callback handling.
+  - Session resolution endpoint for clients.
+  - Schedule read/write proxy to Firebase Realtime Database.
+- Endpoints:
+  - `GET /health`
+  - `GET /api/oauth/redirect`
+  - `GET /api/oauth/callback?code=...`
+  - `GET /api/auth/session/{sessionId}`
+  - `GET /api/users/{userId}/schedule`
+  - `PUT /api/users/{userId}/schedule`
 
-### 2. Server Side (Backend / Auth Server)
-* **Hosting:** Google Cloud Run (Always Free tier, Docker container).
-* **Server URL:** `https://leccheck-655164797100.europe-west1.run.app`
-* **Role:** Primarily handles authentication (Google OAuth2). Since GitHub Pages is completely static, a real backend server is required to receive the callback from Google with the authorization code and securely exchange it for a token.
-* **Environment Variables (Configured in Cloud Run):**
-  - `GOOGLE_CLIENT_SECRET`: The Google Client Secret.
-  - `REDIRECT_URL`: `https://leccheck-655164797100.europe-west1.run.app/oauth_callback`
+### 2) Shared contracts (`shared`)
+- Kotlin serializable models for schedule, course, meetings, and lecture sessions.
+- Keeps payload shape compatible with legacy Firebase records.
 
-### 3. Database
-* **Service:** Firebase Realtime Database.
-* **Role:** Stores users' schedules persistently under the path `/users/{user_id}/schedule.json`.
+### 3) Web client (`webApp`)
+- Runtime: Kotlin/JS (IR).
+- Hosting target: static hosting (GitHub Pages or Firebase Hosting).
+- Integrates with backend OAuth endpoints and schedule endpoints.
 
-### 4. Client Side - Mobile (Android APK)
-* A standalone Frontend application that communicates directly with Google services and Firebase.
-* Performs network requests using `threading` to prevent freezing the User Interface (UI) during data synchronization.
+### 4) Android client (`androidApp`)
+- Runtime: Kotlin + Jetpack Compose.
+- Communicates with backend and Firebase-compatible schedule API.
+- Uses coroutines for non-blocking network operations.
 
----
+### 5) Legacy code (`src`)
+- Existing Python/Flet implementation retained during transition.
+- Can be removed after production parity and cutover validation.
 
-## 🚀 Deployment & Updates Guide
+## Environment variables (backend)
 
-### Updating the Website (GitHub Pages)
-Whenever you make code changes and want to update the live website, run the following commands:
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `REDIRECT_URL` (must match Google OAuth callback config)
+- `FRONTEND_URL` (web app URL to return after callback)
+- `FIREBASE_URL` (defaults to LecCheck database URL)
+
+## Deployment
+
+### Build backend container
 ```bash
-# 1. Compile the app to a static site
-flet publish src/main.py --base-url /LecCheck/
+docker build -t leccheck-backend .
+```
 
-# 2. Move the output files to the docs folder
-rm -rf docs
-mv src/dist docs
+### Run backend locally
+```bash
+docker run --rm -p 8080:8080 \
+  -e GOOGLE_CLIENT_ID=... \
+  -e GOOGLE_CLIENT_SECRET=... \
+  -e REDIRECT_URL=http://localhost:8080/api/oauth/callback \
+  -e FRONTEND_URL=http://localhost:8081 \
+  leccheck-backend
+```
 
-# 3. Prevent GitHub Pages from ignoring system files
-touch docs/.nojekyll
-
-# 4. Commit and push to GitHub
-git add .
-git commit -m "Update website deployment"
-git push origin main
+### Cloud Run deploy (example)
+```bash
+gcloud run deploy leccheck \
+  --source . \
+  --region europe-west1 \
+  --allow-unauthenticated \
+  --set-env-vars GOOGLE_CLIENT_ID=...,GOOGLE_CLIENT_SECRET=...,REDIRECT_URL=https://<cloud-run-url>/api/oauth/callback,FRONTEND_URL=https://<web-url>
+```

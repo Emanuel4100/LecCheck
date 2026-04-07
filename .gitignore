@@ -168,3 +168,11 @@ schedule_data.json
 
 .env
 test.py
+
+# Gradle / Kotlin / Android
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+androidApp/.cxx/

@@ -1,0 +1,40 @@
+{
+  "app": { "title": "Lecture Tracker" },
+  "login": {
+    "welcomeTitle": "Welcome to LecCheck",
+    "welcomeSubtitle": "Manage your schedule from anywhere with cloud sync.",
+    "google": "Secure sign in with Google",
+    "guest": "Continue without login (local mode)",
+    "secure": "Connection secured by Google servers"
+  },
+  "common": { "prev": "Prev", "next": "Next" },
+  "schedule": {
+    "weekly": "Weekly Board",
+    "lectures": "Lectures",
+    "stats": "Statistics",
+    "settings": "Settings",
+    "weekOf": "Week of",
+    "noLectures": "No lectures"
+  },
+  "days": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday"
+  },
+  "lectures": {
+    "pending": "Pending lectures",
+    "future": "Future lectures",
+    "past": "Past lectures"
+  },
+  "stats": {
+    "totalTime": "Total time (semester)",
+    "completedTime": "Completed study time",
+    "totalMeetings": "Total meetings"
+  },
+  "settings": {
+    "hint": "Semester dates, language, and display settings will appear here.",
+    "user": "User"
+  }
+}
