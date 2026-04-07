@@ -22,7 +22,7 @@ This repository now uses Flutter (Dart) as the primary app stack for web, Androi
   - Weekly/lectures/stats/settings UI.
   - App state orchestration and domain use-cases.
 
-### 2) Legacy reference (`src`)
+### 2) Legacy reference (`legacy/src`)
 - Original Python/Flet implementation kept as behavior/layout reference while parity work is in progress.
 
 ## Recommended code layering inside `flutter_app/lib`

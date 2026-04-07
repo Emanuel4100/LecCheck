@@ -6,13 +6,14 @@ LecCheck is a lecture tracking app rebuilt with Flutter (Dart) for high visual p
 
 - Flutter + Dart (Material 3)
 - Targets: Web, Android, Linux desktop
-- Legacy Python/Flet code remains in `src` as migration reference
+- Legacy Python/Flet code remains in `legacy/src` as migration reference
 
 ## Project structure
 
 - `flutter_app` - active Flutter application
-- `src` - original Python/Flet implementation (reference)
+- `legacy/src` - original Python/Flet implementation (reference)
 - `ARCHITECTURE.md` - current Flutter architecture notes
+- `docs` - parity checklist and cutover runbook
 - `run-dev.sh` - helper script to run Flutter quickly
 
 ## Current features
@@ -93,3 +94,10 @@ flutter build linux
 - Reconnect Firebase + OAuth flows from OG app behavior
 - Complete icon/layout parity per screen
 - Add persistent local/cloud storage and sync conflict handling
+
+## Docs
+
+- `ARCHITECTURE.md`
+- `docs/MIGRATION_PARITY_CHECKLIST.md`
+- `docs/PARITY_QA_CHECKLIST.md`
+- `docs/CUTOVER_RUNBOOK.md`
