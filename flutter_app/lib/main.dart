@@ -11,14 +11,28 @@ import 'models/schedule_models.dart';
 
 void main() => runApp(const LecCheckApp());
 
-class LecCheckApp extends StatelessWidget {
+class LecCheckApp extends StatefulWidget {
   const LecCheckApp({super.key});
+
+  @override
+  State<LecCheckApp> createState() => _LecCheckAppState();
+}
+
+class _LecCheckAppState extends State<LecCheckApp> {
+  Locale _locale = const Locale('en');
+
+  void _setLanguage(String languageCode) {
+    setState(() {
+      _locale = Locale(languageCode);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'LecCheck',
       debugShowCheckedModeBanner: false,
+      locale: _locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -39,7 +53,7 @@ class LecCheckApp extends StatelessWidget {
           },
         ),
       ),
-      home: const LecCheckRoot(),
+      home: LecCheckRoot(onLanguageChanged: _setLanguage),
     );
   }
 }
@@ -49,7 +63,8 @@ enum AppScreen { login, onboarding, addCourse, dashboard }
 enum DashboardTab { weekly, lectures, stats, settings }
 
 class LecCheckRoot extends StatefulWidget {
-  const LecCheckRoot({super.key});
+  const LecCheckRoot({super.key, required this.onLanguageChanged});
+  final ValueChanged<String> onLanguageChanged;
 
   @override
   State<LecCheckRoot> createState() => _LecCheckRootState();
@@ -120,6 +135,7 @@ class _LecCheckRootState extends State<LecCheckRoot> {
       selectedDay = weekStartsOn;
       screen = AppScreen.addCourse;
     });
+    widget.onLanguageChanged(lang);
   }
 
   Course? addCourse(
@@ -173,6 +189,7 @@ class _LecCheckRootState extends State<LecCheckRoot> {
     final sc = schedule;
     if (sc == null) return;
     setState(() => sc.language = language);
+    widget.onLanguageChanged(language);
   }
 
   void updateShowWeekend(bool value) {
