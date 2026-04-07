@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
 
-enum LectureStatus { pending, attended, missed, canceled }
+enum LectureStatus {
+  pending,
+  attended,
+  missed,
+  skipped,
+  watchedRecording,
+  canceled,
+}
+
+class NamedLink {
+  NamedLink({required this.title, required this.url});
+  String title;
+  String url;
+}
 
 class Lecture {
   Lecture({
@@ -13,6 +26,8 @@ class Lecture {
     required this.type,
     required this.color,
     this.status = LectureStatus.pending,
+    this.recordingLink,
+    this.meetingId,
   });
   final String courseId;
   final String courseName;
@@ -23,21 +38,33 @@ class Lecture {
   final String type;
   final Color color;
   LectureStatus status;
+  String? recordingLink;
+  final String? meetingId;
 }
 
 class Meeting {
   Meeting({
+    String? id,
     required this.weekday,
     required this.start,
     required this.end,
     required this.room,
     required this.type,
-  });
-  final int weekday;
-  final String start;
-  final String end;
-  final String room;
-  final String type;
+    List<NamedLink>? links,
+  })  : id = id ?? _newMeetingId(),
+        links = links ?? [];
+
+  static int _idSeq = 0;
+  static String _newMeetingId() =>
+      'm_${DateTime.now().microsecondsSinceEpoch}_${++_idSeq}';
+
+  final String id;
+  int weekday;
+  String start;
+  String end;
+  String room;
+  String type;
+  final List<NamedLink> links;
 }
 
 class Course {
@@ -47,16 +74,62 @@ class Course {
     required this.lecturer,
     this.code = '',
     this.link = '',
+    this.notes = '',
+    List<NamedLink>? extraLinks,
     required this.color,
-  });
+  }) : extraLinks = extraLinks ?? [];
+
   final String id;
+  String name;
+  String lecturer;
+  String code;
+  String link;
+  String notes;
+  final List<NamedLink> extraLinks;
+  Color color;
+  final List<Meeting> meetings = [];
+  final List<Lecture> lectures = [];
+}
+
+/// Immutable snapshot for creating/updating a course from the editor.
+class CourseEditorPayload {
+  CourseEditorPayload({
+    required this.name,
+    this.lecturer = '',
+    this.code = '',
+    this.link = '',
+    this.notes = '',
+    List<NamedLink>? extraLinks,
+    required this.color,
+  }) : extraLinks = extraLinks != null
+            ? List<NamedLink>.from(
+                extraLinks.map(
+                  (e) => NamedLink(title: e.title, url: e.url),
+                ),
+              )
+            : [];
+
+  factory CourseEditorPayload.fromCourse(Course c) {
+    return CourseEditorPayload(
+      name: c.name,
+      lecturer: c.lecturer,
+      code: c.code,
+      link: c.link,
+      notes: c.notes,
+      extraLinks: c.extraLinks
+          .map((e) => NamedLink(title: e.title, url: e.url))
+          .toList(),
+      color: c.color,
+    );
+  }
+
   final String name;
   final String lecturer;
   final String code;
   final String link;
+  final String notes;
+  final List<NamedLink> extraLinks;
   final Color color;
-  final List<Meeting> meetings = [];
-  final List<Lecture> lectures = [];
 }
 
 class SemesterSchedule {
@@ -65,24 +138,28 @@ class SemesterSchedule {
     required this.endDate,
     required this.language,
     this.weekStartsOn = 1,
-    this.showWeekend = true,
-    this.enableMeetingNumbers = false,
-  });
+    Set<int>? visibleWeekdays,
+    this.enableMeetingNumbers = true,
+  }) : visibleWeekdays = visibleWeekdays ?? {1, 2, 3, 4, 5, 6, 7};
   DateTime startDate;
   DateTime endDate;
   String language;
   int weekStartsOn;
-  bool showWeekend;
+  Set<int> visibleWeekdays;
   bool enableMeetingNumbers;
   final List<Course> courses = [];
 }
 
 List<int> orderedWeekdaysForSchedule(SemesterSchedule schedule) {
-  final all = schedule.weekStartsOn == 7
-      ? <int>[7, 1, 2, 3, 4, 5, 6]
-      : <int>[1, 2, 3, 4, 5, 6, 7];
-  if (schedule.showWeekend) return all;
-  return all.where((d) => d >= 1 && d <= 5).toList();
+  final all = orderedWeekdaysFromStart(schedule.weekStartsOn);
+  return all.where((d) => schedule.visibleWeekdays.contains(d)).toList();
+}
+
+List<int> orderedWeekdaysFromStart(int weekStartsOn) {
+  const days = <int>[1, 2, 3, 4, 5, 6, 7];
+  final start = days.contains(weekStartsOn) ? weekStartsOn : 1;
+  final startIndex = days.indexOf(start);
+  return [...days.sublist(startIndex), ...days.sublist(0, startIndex)];
 }
 
 String weekdayLabel(int weekday) {
