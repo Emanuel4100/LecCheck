@@ -1,6 +1,6 @@
 # LecCheck Migration Parity Checklist
 
-This checklist maps current Python/Flet behavior to the new Flutter stack so we can verify functional and visual parity during migration.
+Historical checklist: maps former Python/Flet behavior to the Flutter stack for parity verification (migration reference; Python app removed from repo).
 
 ## Current behavior inventory
 

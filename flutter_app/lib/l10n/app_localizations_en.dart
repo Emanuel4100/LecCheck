@@ -27,6 +27,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueCloudComingSoon => 'Continue Cloud (coming soon)';
 
   @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get continueWithGoogleUnavailable =>
+      'Google sign-in (not on this platform)';
+
+  @override
+  String get signInUnavailableThisPlatform =>
+      'Google sign-in is not available on this platform.';
+
+  @override
+  String signInFailed(String message) {
+    return 'Sign-in failed: $message';
+  }
+
+  @override
   String get cloudComingSoonMessage =>
       'Cloud login (Google/Firebase) will be added later.';
 

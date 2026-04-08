@@ -27,7 +27,7 @@ site/
 **/local.properties
 **/.cxx/
 
-# Python (legacy folder)
+# Python (optional tooling)
 __pycache__/
 *.py[cod]
 *.pyo
@@ -43,11 +43,12 @@ htmlcov/
 venv/
 env/
 ENV/
-legacy/.venv/
-
-# Legacy app runtime files
-legacy/schedule_data.json
 storage/
 
 # Misc
 *.log
+
+# Local release artifacts (see scripts/build-download-*.sh and download/README.md)
+download/*.apk
+download/*.tar.gz
+download/*.zip

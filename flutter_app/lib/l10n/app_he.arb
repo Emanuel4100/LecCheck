@@ -6,6 +6,15 @@
   "welcomeSubtitle": "ניהול מערכת שעות עם סנכרון ענן.",
   "continueLocal": "המשך מקומי",
   "continueCloudComingSoon": "המשך בענן (בקרוב)",
+  "continueWithGoogle": "המשך עם Google",
+  "continueWithGoogleUnavailable": "התחברות Google (לא זמינה בפלטפורמה זו)",
+  "signInUnavailableThisPlatform": "התחברות Google אינה זמינה בפלטפורמה זו.",
+  "signInFailed": "ההתחברות נכשלה: {message}",
+  "@signInFailed": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
   "cloudComingSoonMessage": "התחברות לענן (Google/Firebase) תתווסף בהמשך.",
   "semesterSetupTitle": "הגדרת סמסטר חדש",
   "startDate": "תאריך התחלה",

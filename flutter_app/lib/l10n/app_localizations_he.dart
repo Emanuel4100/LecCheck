@@ -27,6 +27,22 @@ class AppLocalizationsHe extends AppLocalizations {
   String get continueCloudComingSoon => 'המשך בענן (בקרוב)';
 
   @override
+  String get continueWithGoogle => 'המשך עם Google';
+
+  @override
+  String get continueWithGoogleUnavailable =>
+      'התחברות Google (לא זמינה בפלטפורמה זו)';
+
+  @override
+  String get signInUnavailableThisPlatform =>
+      'התחברות Google אינה זמינה בפלטפורמה זו.';
+
+  @override
+  String signInFailed(String message) {
+    return 'ההתחברות נכשלה: $message';
+  }
+
+  @override
   String get cloudComingSoonMessage =>
       'התחברות לענן (Google/Firebase) תתווסף בהמשך.';
 

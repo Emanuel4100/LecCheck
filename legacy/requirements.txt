@@ -1,4 +1,0 @@
-flet[fastapi]
-requests
-uvicorn
-python-dotenv

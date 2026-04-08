@@ -20,7 +20,7 @@
 ## Lectures + Stats + Settings
 - Tab switching works on web, Android, and Linux.
 - Empty states are present.
-- Basic card layout matches legacy proportions.
+- Basic card layout matches intended design proportions.
 
 ## Localization + RTL
 - Hebrew strings render correctly.

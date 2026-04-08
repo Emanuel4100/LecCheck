@@ -1,0 +1,29 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "leccheck-app-db",
+          "appId": "1:214900154341:android:6b5069bbc1a1409805190c",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "leccheck-app-db",
+          "configurations": {
+            "android": "1:214900154341:android:6b5069bbc1a1409805190c",
+            "ios": "1:214900154341:ios:33f32bde865e154f05190c",
+            "macos": "1:214900154341:ios:33f32bde865e154f05190c",
+            "web": "1:214900154341:web:1e7e13e38db6ecb705190c",
+            "windows": "1:214900154341:web:1e7e13e38db6ecb705190c"
+          }
+        }
+      }
+    }
+  }
+}

@@ -5,7 +5,7 @@
   - `flutter_app` web
   - `flutter_app` Android
   - `flutter_app` Linux desktop
-- Legacy Python/Flet UI remains in `legacy/src` until final sign-off.
+- The legacy Python/Flet app has been removed; Flutter is the only app in this repository.
 
 ## Pre-cutover checks
 1. Run `flutter doctor` and verify Flutter/Android/Web setup.
@@ -18,14 +18,13 @@
 1. Deploy web static bundle from `flutter_app` (`flutter build web`).
 2. Distribute Android build from `flutter_app` (`flutter build apk` or `appbundle`).
 3. Provide Linux build artifact from `flutter_app` (`flutter build linux`).
-4. Keep `legacy/src` read-only during stabilization window.
+4. Track stabilization issues against Flutter-only releases.
 
 ## Stabilization window
 - Monitor login and onboarding completion rates.
 - Monitor schedule create/edit/status flows.
 - Validate no RTL regressions reported by users.
 
-## Legacy decommission criteria
-- All parity checklist items pass.
-- No blocking regressions for one release cycle.
-- Docs and onboarding instructions updated to Flutter flows.
+## Legacy decommission (complete)
+- Python/Flet source has been removed from the repo.
+- Docs and onboarding point to the Flutter app under `flutter_app/`.

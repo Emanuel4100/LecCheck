@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "214900154341",
+    "project_id": "leccheck-app-db",
+    "storage_bucket": "leccheck-app-db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:214900154341:android:6b5069bbc1a1409805190c",
+        "android_client_info": {
+          "package_name": "com.leccheck.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "214900154341-blf4qu5100rt8snak2i8r50s3ult8vhq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkgtGQ4bAJk7nP8o7kKHRoICt6zDo8Oks"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "214900154341-blf4qu5100rt8snak2i8r50s3ult8vhq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "214900154341-a21bjoq1cedrncvqi6sltnoo9tcath76.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.leccheck.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

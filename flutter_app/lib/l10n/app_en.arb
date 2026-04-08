@@ -6,6 +6,15 @@
   "welcomeSubtitle": "Manage your schedule with cloud sync.",
   "continueLocal": "Continue Local",
   "continueCloudComingSoon": "Continue Cloud (coming soon)",
+  "continueWithGoogle": "Continue with Google",
+  "continueWithGoogleUnavailable": "Google sign-in (not on this platform)",
+  "signInUnavailableThisPlatform": "Google sign-in is not available on this platform.",
+  "signInFailed": "Sign-in failed: {message}",
+  "@signInFailed": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
   "cloudComingSoonMessage": "Cloud login (Google/Firebase) will be added later.",
   "semesterSetupTitle": "New Semester Setup",
   "startDate": "Start date",

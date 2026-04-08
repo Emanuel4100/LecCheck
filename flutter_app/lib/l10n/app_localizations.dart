@@ -134,6 +134,30 @@ abstract class AppLocalizations {
   /// **'Continue Cloud (coming soon)'**
   String get continueCloudComingSoon;
 
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueWithGoogle;
+
+  /// No description provided for @continueWithGoogleUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in (not on this platform)'**
+  String get continueWithGoogleUnavailable;
+
+  /// No description provided for @signInUnavailableThisPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in is not available on this platform.'**
+  String get signInUnavailableThisPlatform;
+
+  /// No description provided for @signInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed: {message}'**
+  String signInFailed(String message);
+
   /// No description provided for @cloudComingSoonMessage.
   ///
   /// In en, this message translates to:

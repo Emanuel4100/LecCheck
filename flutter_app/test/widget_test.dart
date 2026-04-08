@@ -13,7 +13,8 @@ import 'package:flutter_app/main.dart';
 void main() {
   testWidgets('LecCheck login renders', (WidgetTester tester) async {
     await tester.pumpWidget(const LecCheckApp());
+    await tester.pumpAndSettle();
     expect(find.text('Welcome to LecCheck'), findsOneWidget);
-    expect(find.byType(FilledButton), findsOneWidget);
+    expect(find.byType(FilledButton), findsAtLeastNWidgets(1));
   });
 }
