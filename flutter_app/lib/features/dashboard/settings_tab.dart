@@ -15,6 +15,7 @@ class SettingsTab extends StatelessWidget {
     required this.onChangeLanguage,
     required this.onChangeVisibleDays,
     required this.onToggleMeetingNumbers,
+    required this.onUse24HourTimeChanged,
     required this.onChangeWeekStart,
     required this.onChangeStartDate,
     required this.onChangeEndDate,
@@ -30,6 +31,7 @@ class SettingsTab extends StatelessWidget {
   final ValueChanged<String> onChangeLanguage;
   final ValueChanged<Set<int>> onChangeVisibleDays;
   final ValueChanged<bool> onToggleMeetingNumbers;
+  final ValueChanged<bool> onUse24HourTimeChanged;
   final ValueChanged<int> onChangeWeekStart;
   final ValueChanged<DateTime> onChangeStartDate;
   final ValueChanged<DateTime> onChangeEndDate;
@@ -52,6 +54,15 @@ class SettingsTab extends StatelessWidget {
             subtitle: Text(l10n.manageCoursesSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: onManageCourses,
+          ),
+        ),
+        Card(
+          child: SwitchListTile(
+            secondary: const Icon(Icons.schedule),
+            title: Text(l10n.use24HourTimeTitle),
+            subtitle: Text(l10n.use24HourTimeSubtitle),
+            value: schedule.use24HourTime,
+            onChanged: onUse24HourTimeChanged,
           ),
         ),
         Card(

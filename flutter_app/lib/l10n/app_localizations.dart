@@ -158,6 +158,12 @@ abstract class AppLocalizations {
   /// **'Sign-in failed: {message}'**
   String signInFailed(String message);
 
+  /// No description provided for @signInAndroidConfigHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Sign-In needs your app’s SHA-1 in Firebase. Console → Project settings → Your Android app → Add fingerprint. Then run: cd android && ./gradlew signingReport (use the SHA-1 under Variant: debug).'**
+  String get signInAndroidConfigHint;
+
   /// No description provided for @cloudComingSoonMessage.
   ///
   /// In en, this message translates to:
@@ -1105,6 +1111,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Changes apply to every week for this meeting slot.'**
   String get editMeetingResourcesHint;
+
+  /// No description provided for @lectureNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes for this session'**
+  String get lectureNotesLabel;
+
+  /// No description provided for @lectureNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Prep, assignments, reminders…'**
+  String get lectureNotesHint;
+
+  /// No description provided for @use24HourTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'24-hour time'**
+  String get use24HourTimeTitle;
+
+  /// No description provided for @use24HourTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Off: AM/PM (locale style). On: 14:30 style.'**
+  String get use24HourTimeSubtitle;
+
+  /// No description provided for @dayOptionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Day options'**
+  String get dayOptionsTitle;
+
+  /// No description provided for @markNoClassDay.
+  ///
+  /// In en, this message translates to:
+  /// **'No class (cancel all)'**
+  String get markNoClassDay;
+
+  /// No description provided for @markNoClassDaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Marks every session this day as canceled.'**
+  String get markNoClassDaySubtitle;
+
+  /// No description provided for @clearNoClassDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore normal day'**
+  String get clearNoClassDay;
+
+  /// No description provided for @afterSemesterShort.
+  ///
+  /// In en, this message translates to:
+  /// **'After term'**
+  String get afterSemesterShort;
+
+  /// No description provided for @semesterEndsThisDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Semester ends'**
+  String get semesterEndsThisDay;
+
+  /// No description provided for @gridZoomIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom grid in'**
+  String get gridZoomIn;
+
+  /// No description provided for @gridZoomOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom grid out'**
+  String get gridZoomOut;
+
+  /// No description provided for @gridZoomReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset grid zoom'**
+  String get gridZoomReset;
 }
 
 class _AppLocalizationsDelegate

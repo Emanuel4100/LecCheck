@@ -21,6 +21,7 @@ class LecturesTab extends StatefulWidget {
     required this.showMeetingNumber,
     required this.l10n,
     required this.onStatus,
+    required this.onLectureDetail,
     required this.focusSearchToken,
   });
 
@@ -29,6 +30,8 @@ class LecturesTab extends StatefulWidget {
   final bool showMeetingNumber;
   final AppLocalizations l10n;
   final void Function(Lecture, LectureStatus) onStatus;
+  final Future<void> Function(BuildContext context, Lecture lecture)
+      onLectureDetail;
   final int focusSearchToken;
 
   @override
@@ -179,9 +182,11 @@ class _LecturesTabState extends State<LecturesTab>
                     ? null
                     : l10n.lecturesMarkToKeepStreakHint,
                 showMeetingNumber: widget.showMeetingNumber,
+                use24HourTime: widget.schedule.use24HourTime,
                 allLectures: widget.data,
                 l10n: l10n,
                 onStatus: widget.onStatus,
+                onLectureDetail: widget.onLectureDetail,
               ),
               _UpcomingPane(
                 lectures: upcoming,
@@ -190,8 +195,10 @@ class _LecturesTabState extends State<LecturesTab>
                     setState(() => _includeWeekAfter = !_includeWeekAfter),
                 l10n: l10n,
                 showMeetingNumber: widget.showMeetingNumber,
+                use24HourTime: widget.schedule.use24HourTime,
                 allLectures: widget.data,
                 onStatus: widget.onStatus,
+                onLectureDetail: widget.onLectureDetail,
               ),
               _AllLecturesPane(
                 lectures: allList,
@@ -202,9 +209,11 @@ class _LecturesTabState extends State<LecturesTab>
                 sort: _sort,
                 onSortChanged: (s) => setState(() => _sort = s),
                 showMeetingNumber: widget.showMeetingNumber,
+                use24HourTime: widget.schedule.use24HourTime,
                 allLectures: widget.data,
                 l10n: l10n,
                 onStatus: widget.onStatus,
+                onLectureDetail: widget.onLectureDetail,
               ),
             ],
           ),
@@ -222,9 +231,11 @@ class _LectureListPane extends StatelessWidget {
     required this.emptySubtitle,
     this.footerHint,
     required this.showMeetingNumber,
+    required this.use24HourTime,
     required this.allLectures,
     required this.l10n,
     required this.onStatus,
+    required this.onLectureDetail,
   });
 
   final List<Lecture> lectures;
@@ -233,9 +244,12 @@ class _LectureListPane extends StatelessWidget {
   final String emptySubtitle;
   final String? footerHint;
   final bool showMeetingNumber;
+  final bool use24HourTime;
   final List<Lecture> allLectures;
   final AppLocalizations l10n;
   final void Function(Lecture, LectureStatus) onStatus;
+  final Future<void> Function(BuildContext context, Lecture lecture)
+      onLectureDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -278,8 +292,10 @@ class _LectureListPane extends StatelessWidget {
               lecture: lectures[i],
               allLectures: allLectures,
               showMeetingNumber: showMeetingNumber,
+              use24HourTime: use24HourTime,
               l10n: l10n,
               onStatus: onStatus,
+              onOpenDetail: () => onLectureDetail(context, lectures[i]),
             ),
           ),
         ),
@@ -295,8 +311,10 @@ class _UpcomingPane extends StatelessWidget {
     required this.onToggleWeekAfter,
     required this.l10n,
     required this.showMeetingNumber,
+    required this.use24HourTime,
     required this.allLectures,
     required this.onStatus,
+    required this.onLectureDetail,
   });
 
   final List<Lecture> lectures;
@@ -304,8 +322,11 @@ class _UpcomingPane extends StatelessWidget {
   final VoidCallback onToggleWeekAfter;
   final AppLocalizations l10n;
   final bool showMeetingNumber;
+  final bool use24HourTime;
   final List<Lecture> allLectures;
   final void Function(Lecture, LectureStatus) onStatus;
+  final Future<void> Function(BuildContext context, Lecture lecture)
+      onLectureDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -329,8 +350,10 @@ class _UpcomingPane extends StatelessWidget {
                     lecture: lectures[i],
                     allLectures: allLectures,
                     showMeetingNumber: showMeetingNumber,
+                    use24HourTime: use24HourTime,
                     l10n: l10n,
                     onStatus: onStatus,
+                    onOpenDetail: () => onLectureDetail(context, lectures[i]),
                   ),
                 ),
         ),
@@ -360,9 +383,11 @@ class _AllLecturesPane extends StatelessWidget {
     required this.sort,
     required this.onSortChanged,
     required this.showMeetingNumber,
+    required this.use24HourTime,
     required this.allLectures,
     required this.l10n,
     required this.onStatus,
+    required this.onLectureDetail,
   });
 
   final List<Lecture> lectures;
@@ -373,9 +398,12 @@ class _AllLecturesPane extends StatelessWidget {
   final LecturesSort sort;
   final ValueChanged<LecturesSort> onSortChanged;
   final bool showMeetingNumber;
+  final bool use24HourTime;
   final List<Lecture> allLectures;
   final AppLocalizations l10n;
   final void Function(Lecture, LectureStatus) onStatus;
+  final Future<void> Function(BuildContext context, Lecture lecture)
+      onLectureDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -482,8 +510,10 @@ class _AllLecturesPane extends StatelessWidget {
               lecture: lectures[i],
               allLectures: allLectures,
               showMeetingNumber: showMeetingNumber,
+              use24HourTime: use24HourTime,
               l10n: l10n,
               onStatus: onStatus,
+              onOpenDetail: () => onLectureDetail(context, lectures[i]),
             ),
           ),
         ),

@@ -10,15 +10,19 @@ class LectureCard extends StatelessWidget {
     required this.lecture,
     required this.allLectures,
     required this.showMeetingNumber,
+    required this.use24HourTime,
     required this.l10n,
     required this.onStatus,
+    this.onOpenDetail,
   });
 
   final Lecture lecture;
   final List<Lecture> allLectures;
   final bool showMeetingNumber;
+  final bool use24HourTime;
   final AppLocalizations l10n;
   final void Function(Lecture, LectureStatus) onStatus;
+  final VoidCallback? onOpenDetail;
 
   static const _compactBtnStyle = ButtonStyle(
     visualDensity: VisualDensity.compact,
@@ -34,12 +38,16 @@ class LectureCard extends StatelessWidget {
 
     final titleText =
         '${localizeCourseName(lecture.courseName, l10n)} • ${lecture.type}${showMeetingNumber ? ' • #${effectiveMeetingNumber(lecture, allLectures)}' : ''}';
+    final dateText = formatLectureDateMedium(lecture.date, l10n);
     final metaText =
-        '${formatTimeRange(lecture.start, lecture.end, l10n)} • ${lecture.room} • ${statusLabelL10n(lecture.status, l10n)}';
+        '${formatTimeRange(lecture.start, lecture.end, l10n, use24HourTime: use24HourTime)} • ${lecture.room} • ${statusLabelL10n(lecture.status, l10n)}';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-      child: Padding(
+      child: InkWell(
+        onTap: onOpenDetail,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -81,6 +89,14 @@ class LectureCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
+                      Text(
+                        dateText,
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
                       Text(
                         metaText,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -152,6 +168,7 @@ class LectureCard extends StatelessWidget {
                 ),
               ),
           ],
+        ),
         ),
       ),
     );

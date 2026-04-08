@@ -1,9 +1,28 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../firebase_options.dart';
+
+/// Google Play Services [ApiException] code 10 = DEVELOPER_ERROR (SHA-1 / OAuth client mismatch).
+bool isGoogleSignInAndroidDeveloperError(Object error) {
+  final s = error.toString();
+  if (s.contains('DEVELOPER_ERROR')) return true;
+  if (s.contains('ApiException: 10') || s.contains('ApiException:10')) {
+    return true;
+  }
+  if (error is PlatformException && error.code == 'sign_in_failed') {
+    if (s.contains('10:') &&
+        (s.contains('gms') ||
+            s.contains('ApiException') ||
+            s.contains('com.google'))) {
+      return true;
+    }
+  }
+  return false;
+}
 
 bool get googleSignInSupportedOnPlatform {
   if (kIsWeb) return true;

@@ -4,12 +4,12 @@ String _lecturePreserveKey(DateTime date, String start, String end) =>
     '${date.year}-${date.month}-${date.day}|$start|$end';
 
 /// Rebuilds [course.lectures] from [course.meetings] and semester bounds.
-/// Preserves [LectureStatus] and [Lecture.recordingLink] when date/start/end match.
+/// Preserves status, recording link, and notes when date/start/end match.
 void rebuildLecturesForCourse(Course course, SemesterSchedule schedule) {
-  final preserved = <String, (LectureStatus, String?)>{};
+  final preserved = <String, (LectureStatus, String?, String)>{};
   for (final l in course.lectures) {
     preserved[_lecturePreserveKey(l.date, l.start, l.end)] =
-        (l.status, l.recordingLink);
+        (l.status, l.recordingLink, l.notes);
   }
 
   course.lectures.clear();
@@ -32,6 +32,7 @@ void rebuildLecturesForCourse(Course course, SemesterSchedule schedule) {
             meetingId: meeting.id,
             status: p?.$1 ?? LectureStatus.pending,
             recordingLink: p?.$2,
+            notes: p?.$3 ?? '',
           ),
         );
       }
@@ -43,4 +44,15 @@ void rebuildLecturesForCourse(Course course, SemesterSchedule schedule) {
     if (byDate != 0) return byDate;
     return a.start.compareTo(b.start);
   });
+}
+
+/// Sets [LectureStatus.canceled] for every lecture on dates in [SemesterSchedule.noClassDateKeys].
+void applyNoClassDatesToSchedule(SemesterSchedule schedule) {
+  for (final c in schedule.courses) {
+    for (final l in c.lectures) {
+      if (schedule.noClassDateKeys.contains(scheduleDateKey(l.date))) {
+        l.status = LectureStatus.canceled;
+      }
+    }
+  }
 }

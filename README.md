@@ -16,7 +16,7 @@ LecCheck is a lecture and semester tracking app built with **Flutter** (Dart) fo
 - `flutter_app/lib/app/leccheck_root.dart` — navigation shell, persistence, login/onboarding
 - `ARCHITECTURE.md` — Flutter architecture and direction
 - `docs/` — parity QA checklist, migration notes, cutover runbook
-- `scripts/` — release helpers that place binaries under `download/` (see below)
+- `scripts/` — release helpers that copy binaries to **~/Downloads** (or `LEC_CHECK_OUT_DIR`; see [`download/README.md`](download/README.md))
 - `run-dev.sh` / `run-dev.fish` — helpers to run the app with a sensible browser on Linux
 
 ## Features
@@ -114,13 +114,13 @@ flutter build apk --release
 flutter build linux --release
 ```
 
-### Scripts → `download/` (gitignored binaries)
+### Scripts → `~/Downloads` (or `LEC_CHECK_OUT_DIR`)
 
 From the **repository root**:
 
 ```bash
-./scripts/build-download-linux.sh    # → download/leccheck-linux-x64-<version>.tar.gz
-./scripts/build-download-android.sh  # → download/leccheck-android-<version>.apk
+./scripts/build-download-linux.sh    # → ~/Downloads/leccheck-linux-x64-<version>.tar.gz
+./scripts/build-download-android.sh  # → ~/Downloads/leccheck-android-<version>.apk
 ```
 
 See [`download/README.md`](download/README.md). APKs from the script are for sideloading; **Google Play** uses `flutter build appbundle` (AAB), not this APK path.

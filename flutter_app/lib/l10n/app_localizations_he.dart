@@ -43,6 +43,10 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get signInAndroidConfigHint =>
+      'יש להוסיף את טביעת ה-SHA-1 של האפליקציה ב-Firebase (הגדרות הפרויקט → אפליקציית Android → הוספת טביעת אצבע). להצגת SHA-1: cd android && ./gradlew signingReport (בחרו את debug).';
+
+  @override
   String get cloudComingSoonMessage =>
       'התחברות לענן (Google/Firebase) תתווסף בהמשך.';
 
@@ -526,4 +530,44 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get editMeetingResourcesHint =>
       'השינויים חלים על כל השבועות עבור מפגש זה.';
+
+  @override
+  String get lectureNotesLabel => 'הערות למפגש זה';
+
+  @override
+  String get lectureNotesHint => 'הכנה, מטלות, תזכורות…';
+
+  @override
+  String get use24HourTimeTitle => 'שעון בן 24 שעות';
+
+  @override
+  String get use24HourTimeSubtitle =>
+      'כבוי: לפי אזור (בוקר/ערב). מופעל: 14:30.';
+
+  @override
+  String get dayOptionsTitle => 'אפשרויות ליום';
+
+  @override
+  String get markNoClassDay => 'אין שיעורים (ביטול הכול)';
+
+  @override
+  String get markNoClassDaySubtitle => 'מסמן את כל המפגשים ביום זה כמבוטלים.';
+
+  @override
+  String get clearNoClassDay => 'שחזור יום רגיל';
+
+  @override
+  String get afterSemesterShort => 'אחרי הסמסטר';
+
+  @override
+  String get semesterEndsThisDay => 'סיום הסמסטר';
+
+  @override
+  String get gridZoomIn => 'הגדלת לוח';
+
+  @override
+  String get gridZoomOut => 'הקטנת לוח';
+
+  @override
+  String get gridZoomReset => 'איפוס זום';
 }

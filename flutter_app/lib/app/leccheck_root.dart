@@ -16,6 +16,7 @@ import '../features/course_setup/course_list_page.dart';
 import '../features/course_setup/course_setup_screen.dart';
 import '../features/dashboard/dashboard_shell.dart';
 import '../features/dashboard/dashboard_types.dart';
+import '../features/dashboard/lecture_detail_sheet.dart';
 import '../l10n/app_localizations.dart';
 import '../models/schedule_models.dart';
 import '../models/schedule_lectures.dart';
@@ -223,6 +224,13 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     );
   }
 
+  void _rebuildAndApplyNoClass(Course course) {
+    final sc = schedule;
+    if (sc == null) return;
+    rebuildLecturesForCourse(course, sc);
+    applyNoClassDatesToSchedule(sc);
+  }
+
   void _createCourse(CourseEditorPayload payload, List<Meeting> meetings) {
     final sc = schedule;
     if (sc == null) return;
@@ -241,7 +249,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     for (final m in meetings) {
       course.meetings.add(_cloneMeeting(m));
     }
-    rebuildLecturesForCourse(course, sc);
+    _rebuildAndApplyNoClass(course);
     sc.courses.add(course);
     setState(_invalidateLectureCache);
     _persistSchedule();
@@ -268,7 +276,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     for (final m in meetings) {
       course.meetings.add(_cloneMeeting(m));
     }
-    rebuildLecturesForCourse(course, sc);
+    _rebuildAndApplyNoClass(course);
     setState(_invalidateLectureCache);
     _persistSchedule();
   }
@@ -283,7 +291,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     final sc = schedule;
     if (sc == null) return;
     course.meetings.add(_cloneMeeting(meeting));
-    rebuildLecturesForCourse(course, sc);
+    _rebuildAndApplyNoClass(course);
     setState(_invalidateLectureCache);
     _persistSchedule();
   }
@@ -299,7 +307,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     for (final l in links) {
       meeting.links.add(NamedLink(title: l.title, url: l.url));
     }
-    rebuildLecturesForCourse(course, sc);
+    _rebuildAndApplyNoClass(course);
     setState(_invalidateLectureCache);
     _persistSchedule();
   }
@@ -369,6 +377,68 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     _persistSchedule();
   }
 
+  void updateUse24HourTime(bool value) {
+    final sc = schedule;
+    if (sc == null) return;
+    setState(() => sc.use24HourTime = value);
+    _persistSchedule();
+  }
+
+  void markNoClassDay(DateTime date) {
+    final sc = schedule;
+    if (sc == null) return;
+    final key = scheduleDateKey(date);
+    setState(() {
+      sc.noClassDateKeys.add(key);
+      for (final c in sc.courses) {
+        for (final l in c.lectures) {
+          if (scheduleDateKey(l.date) == key) {
+            l.status = LectureStatus.canceled;
+          }
+        }
+      }
+      _invalidateLectureCache();
+    });
+    _persistSchedule();
+  }
+
+  void clearNoClassDay(DateTime date) {
+    final sc = schedule;
+    if (sc == null) return;
+    final key = scheduleDateKey(date);
+    setState(() {
+      sc.noClassDateKeys.remove(key);
+      for (final c in sc.courses) {
+        for (final l in c.lectures) {
+          if (scheduleDateKey(l.date) == key) {
+            l.status = LectureStatus.pending;
+          }
+        }
+      }
+      _invalidateLectureCache();
+    });
+    _persistSchedule();
+  }
+
+  Future<void> openLectureDetail(BuildContext context, Lecture lecture) async {
+    final sc = schedule;
+    if (sc == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    await showLectureDetailEditor(
+      context,
+      schedule: sc,
+      lecture: lecture,
+      allLectures: allLectures,
+      l10n: l10n,
+      onStatus: (l, s) {
+        setState(() => l.status = s);
+        _persistSchedule();
+      },
+      onMeetingLinksSaved: _updateMeetingLinks,
+    );
+    if (mounted) setState(_invalidateLectureCache);
+  }
+
   void updateStartDate(DateTime date) {
     final sc = schedule;
     if (sc == null) return;
@@ -377,6 +447,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
       for (final c in sc.courses) {
         rebuildLecturesForCourse(c, sc);
       }
+      applyNoClassDatesToSchedule(sc);
       _invalidateLectureCache();
     });
     _persistSchedule();
@@ -390,6 +461,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
       for (final c in sc.courses) {
         rebuildLecturesForCourse(c, sc);
       }
+      applyNoClassDatesToSchedule(sc);
       _invalidateLectureCache();
     });
     _persistSchedule();
@@ -455,10 +527,14 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           onOpenCourseEditor: (ctx) => _pushCourseEditor(ctx, existing: null),
           onOpenManageCourses: _pushManageCourses,
           onMeetingLinksSaved: _updateMeetingLinks,
+          onLectureDetail: openLectureDetail,
+          onMarkNoClassDay: markNoClassDay,
+          onClearNoClassDay: clearNoClassDay,
           onChangeLanguage: updateLanguage,
           onChangeWeekStart: updateWeekStartsOn,
           onChangeVisibleDays: updateVisibleDays,
           onToggleMeetingNumbers: updateMeetingNumbers,
+          onUse24HourTimeChanged: updateUse24HourTime,
           onChangeStartDate: updateStartDate,
           onChangeEndDate: updateEndDate,
           themeMode: widget.themeMode,
@@ -507,8 +583,14 @@ class _LoginScreenState extends State<_LoginScreen> {
       await widget.onGoogleSignedIn();
     } on Object catch (e) {
       if (context.mounted) {
+        final msg = isGoogleSignInAndroidDeveloperError(e)
+            ? l10n.signInAndroidConfigHint
+            : l10n.signInFailed('$e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.signInFailed('$e'))),
+          SnackBar(
+            content: Text(msg),
+            duration: const Duration(seconds: 12),
+          ),
         );
       }
     } finally {
@@ -519,69 +601,153 @@ class _LoginScreenState extends State<_LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final googleAvailable = FeatureFlags.enableGoogleSignIn &&
         googleSignInSupportedOnPlatform &&
         firebaseSupportedOnThisPlatform;
+    final hPad = Adaptive.horizontalPadding(context) + 12;
+    final isCompact = Adaptive.isCompactPhone(context);
 
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: Adaptive.maxBodyWidth(context)),
-          child: Card(
-            child: SizedBox(
-              width: 520,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🎓', style: TextStyle(fontSize: 56)),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.welcomeTitle,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(l10n.welcomeSubtitle),
-                    const SizedBox(height: 20),
-                    FilledButton(
-                      onPressed: _busy ? null : widget.onGuest,
-                      child: Text(l10n.continueLocal),
-                    ),
-                    const SizedBox(height: 8),
-                    if (FeatureFlags.enableGoogleSignIn)
-                      OutlinedButton.icon(
-                        onPressed: _busy || !googleAvailable
-                            ? null
-                            : () => _onGooglePressed(context),
-                        icon: _busy
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.login),
-                        label: Text(
-                          googleAvailable
-                              ? l10n.continueWithGoogle
-                              : l10n.continueWithGoogleUnavailable,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              cs.primary.withValues(alpha: 0.12),
+              cs.surface,
+              cs.surfaceContainerLow,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const maxCard = 440.0;
+              final cardWidth = (constraints.maxWidth - hPad * 2).clamp(
+                0.0,
+                maxCard,
+              );
+              return Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 20),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: cardWidth),
+                    child: Material(
+                      elevation: isCompact ? 2 : 3,
+                      shadowColor: cs.shadow.withValues(alpha: 0.15),
+                      color: cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(28),
+                      clipBehavior: Clip.antiAlias,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          isCompact ? 22 : 28,
+                          32,
+                          isCompact ? 22 : 28,
+                          28,
                         ),
-                      )
-                    else
-                      OutlinedButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.cloudComingSoonMessage),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: isCompact ? 36 : 42,
+                              backgroundColor: cs.primaryContainer,
+                              child: const Text(
+                                '🎓',
+                                style: TextStyle(fontSize: 40),
+                              ),
                             ),
-                          );
-                        },
-                        child: Text(l10n.continueCloudComingSoon),
+                            const SizedBox(height: 20),
+                            Text(
+                              l10n.welcomeTitle,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              l10n.welcomeSubtitle,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                height: 1.35,
+                              ),
+                            ),
+                            SizedBox(height: isCompact ? 28 : 32),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: _busy ? null : widget.onGuest,
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                                child: Text(l10n.continueLocal),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (FeatureFlags.enableGoogleSignIn)
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: _busy || !googleAvailable
+                                      ? null
+                                      : () => _onGooglePressed(context),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  icon: _busy
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: cs.primary,
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.account_circle_outlined,
+                                          color: googleAvailable
+                                              ? cs.primary
+                                              : cs.onSurfaceVariant,
+                                        ),
+                                  label: Text(
+                                    googleAvailable
+                                        ? l10n.continueWithGoogle
+                                        : l10n.continueWithGoogleUnavailable,
+                                  ),
+                                ),
+                              )
+                            else
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.cloudComingSoonMessage,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Text(l10n.continueCloudComingSoon),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

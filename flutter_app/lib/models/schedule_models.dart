@@ -28,6 +28,7 @@ class Lecture {
     this.status = LectureStatus.pending,
     this.recordingLink,
     this.meetingId,
+    this.notes = '',
   });
   final String courseId;
   final String courseName;
@@ -40,6 +41,8 @@ class Lecture {
   LectureStatus status;
   String? recordingLink;
   final String? meetingId;
+  /// Per-occurrence note (this calendar instance).
+  String notes;
 }
 
 class Meeting {
@@ -140,15 +143,26 @@ class SemesterSchedule {
     this.weekStartsOn = 1,
     Set<int>? visibleWeekdays,
     this.enableMeetingNumbers = true,
-  }) : visibleWeekdays = visibleWeekdays ?? {1, 2, 3, 4, 5, 6, 7};
+    Set<String>? noClassDateKeys,
+    this.use24HourTime = false,
+  })  : visibleWeekdays = visibleWeekdays ?? {1, 2, 3, 4, 5, 6, 7},
+        noClassDateKeys = noClassDateKeys ?? <String>{};
   DateTime startDate;
   DateTime endDate;
   String language;
   int weekStartsOn;
   Set<int> visibleWeekdays;
   bool enableMeetingNumbers;
+  /// Local calendar dates `yyyy-MM-dd` with no class (all meetings canceled).
+  Set<String> noClassDateKeys;
+  /// When true, show times as 24h; when false, use locale AM/PM (`jm`).
+  bool use24HourTime;
   final List<Course> courses = [];
 }
+
+/// Stable local date key for [SemesterSchedule.noClassDateKeys].
+String scheduleDateKey(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 List<int> orderedWeekdaysForSchedule(SemesterSchedule schedule) {
   final all = orderedWeekdaysFromStart(schedule.weekStartsOn);

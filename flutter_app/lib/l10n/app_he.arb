@@ -15,6 +15,7 @@
       "message": {"type": "String"}
     }
   },
+  "signInAndroidConfigHint": "יש להוסיף את טביעת ה-SHA-1 של האפליקציה ב-Firebase (הגדרות הפרויקט → אפליקציית Android → הוספת טביעת אצבע). להצגת SHA-1: cd android && ./gradlew signingReport (בחרו את debug).",
   "cloudComingSoonMessage": "התחברות לענן (Google/Firebase) תתווסף בהמשך.",
   "semesterSetupTitle": "הגדרת סמסטר חדש",
   "startDate": "תאריך התחלה",
@@ -182,5 +183,18 @@
   "openLinkFailed": "לא ניתן לפתוח את הקישור",
   "resourcesSection": "משאבים",
   "primaryCourseLink": "אתר הקורס",
-  "editMeetingResourcesHint": "השינויים חלים על כל השבועות עבור מפגש זה."
+  "editMeetingResourcesHint": "השינויים חלים על כל השבועות עבור מפגש זה.",
+  "lectureNotesLabel": "הערות למפגש זה",
+  "lectureNotesHint": "הכנה, מטלות, תזכורות…",
+  "use24HourTimeTitle": "שעון בן 24 שעות",
+  "use24HourTimeSubtitle": "כבוי: לפי אזור (בוקר/ערב). מופעל: 14:30.",
+  "dayOptionsTitle": "אפשרויות ליום",
+  "markNoClassDay": "אין שיעורים (ביטול הכול)",
+  "markNoClassDaySubtitle": "מסמן את כל המפגשים ביום זה כמבוטלים.",
+  "clearNoClassDay": "שחזור יום רגיל",
+  "afterSemesterShort": "אחרי הסמסטר",
+  "semesterEndsThisDay": "סיום הסמסטר",
+  "gridZoomIn": "הגדלת לוח",
+  "gridZoomOut": "הקטנת לוח",
+  "gridZoomReset": "איפוס זום"
 }

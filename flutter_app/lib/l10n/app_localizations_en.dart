@@ -43,6 +43,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get signInAndroidConfigHint =>
+      'Google Sign-In needs your app’s SHA-1 in Firebase. Console → Project settings → Your Android app → Add fingerprint. Then run: cd android && ./gradlew signingReport (use the SHA-1 under Variant: debug).';
+
+  @override
   String get cloudComingSoonMessage =>
       'Cloud login (Google/Firebase) will be added later.';
 
@@ -529,4 +533,45 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get editMeetingResourcesHint =>
       'Changes apply to every week for this meeting slot.';
+
+  @override
+  String get lectureNotesLabel => 'Notes for this session';
+
+  @override
+  String get lectureNotesHint => 'Prep, assignments, reminders…';
+
+  @override
+  String get use24HourTimeTitle => '24-hour time';
+
+  @override
+  String get use24HourTimeSubtitle =>
+      'Off: AM/PM (locale style). On: 14:30 style.';
+
+  @override
+  String get dayOptionsTitle => 'Day options';
+
+  @override
+  String get markNoClassDay => 'No class (cancel all)';
+
+  @override
+  String get markNoClassDaySubtitle =>
+      'Marks every session this day as canceled.';
+
+  @override
+  String get clearNoClassDay => 'Restore normal day';
+
+  @override
+  String get afterSemesterShort => 'After term';
+
+  @override
+  String get semesterEndsThisDay => 'Semester ends';
+
+  @override
+  String get gridZoomIn => 'Zoom grid in';
+
+  @override
+  String get gridZoomOut => 'Zoom grid out';
+
+  @override
+  String get gridZoomReset => 'Reset grid zoom';
 }

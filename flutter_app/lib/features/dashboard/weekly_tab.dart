@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/platform/adaptive.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
 import 'dashboard_utils.dart';
+import 'lecture_detail_sheet.dart';
 
 class WeeklyTab extends StatefulWidget {
   const WeeklyTab({
@@ -15,6 +15,8 @@ class WeeklyTab extends StatefulWidget {
     required this.weekSyncToken,
     required this.onStatus,
     required this.onMeetingLinksSaved,
+    required this.onMarkNoClassDay,
+    required this.onClearNoClassDay,
     required this.l10n,
   });
 
@@ -26,6 +28,10 @@ class WeeklyTab extends StatefulWidget {
   final void Function(Lecture, LectureStatus) onStatus;
   final void Function(Course course, Meeting meeting, List<NamedLink> links)
       onMeetingLinksSaved;
+  /// Add [date] (date-only) to no-class set and cancel all lectures that day.
+  final void Function(DateTime date) onMarkNoClassDay;
+  /// Remove [date] from no-class set and reset lectures that day to pending.
+  final void Function(DateTime date) onClearNoClassDay;
   final AppLocalizations l10n;
 
   @override
@@ -34,6 +40,7 @@ class WeeklyTab extends StatefulWidget {
 
 class _WeeklyTabState extends State<WeeklyTab> {
   late DateTime _currentWeekStart;
+  double _gridScale = 1.0;
 
   @override
   void initState() {
@@ -85,6 +92,35 @@ class _WeeklyTabState extends State<WeeklyTab> {
             ),
           ],
         ),
+        if (!Adaptive.isDesktop(context) && !Adaptive.isTablet(context)) ...[
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: widget.l10n.gridZoomOut,
+                onPressed: _gridScale > 0.65
+                    ? () => setState(() => _gridScale -= 0.1)
+                    : null,
+                icon: const Icon(Icons.zoom_out),
+              ),
+              Text('${(_gridScale * 100).round()}%'),
+              IconButton(
+                tooltip: widget.l10n.gridZoomIn,
+                onPressed: _gridScale < 1.45
+                    ? () => setState(() => _gridScale += 0.1)
+                    : null,
+                icon: const Icon(Icons.zoom_in),
+              ),
+              IconButton(
+                tooltip: widget.l10n.gridZoomReset,
+                onPressed:
+                    (_gridScale - 1.0).abs() > 0.01 ? () => setState(() => _gridScale = 1.0) : null,
+                icon: const Icon(Icons.fit_screen),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 8),
         LinearProgressIndicator(value: widget.attendance),
         const SizedBox(height: 12),
@@ -122,18 +158,22 @@ class _WeeklyTabState extends State<WeeklyTab> {
                 : 72.0;
         final availW =
             (constraints.maxWidth - timeAxisWidth).clamp(1.0, double.infinity);
-        final cellWidth =
-            (availW / columns).clamp(minCellWidth, 320.0);
+        final baseCell =
+            (availW / columns).clamp(minCellWidth, 320.0) * _gridScale;
+        final cellWidth = baseCell;
         final hourHeight = ((constraints.maxHeight - dayHeaderHeight) /
-                totalHours)
-            .clamp(32.0, 64.0);
+                    totalHours)
+                .clamp(32.0, 64.0) *
+            _gridScale;
         final gridHeight = hourHeight * totalHours;
         final compactTile = cellWidth < 120;
+        final titleOnlyTile = cellWidth < 96;
         final isCurrentWeek = _isCurrentWeek();
         final now = DateTime.now();
         final nowTop =
             (((now.hour * 60 + now.minute) - (8 * 60)) / 60.0) * hourHeight;
-        return SingleChildScrollView(
+        final endD = widget.schedule.endDate;
+        Widget grid = SingleChildScrollView(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: SizedBox(
@@ -148,8 +188,10 @@ class _WeeklyTabState extends State<WeeklyTab> {
                         SizedBox(height: dayHeaderHeight),
                         ...List.generate(totalHours, (index) {
                           final hour = 8 + index;
-                          final label = TimeOfDay(hour: hour, minute: 0).format(
-                            context,
+                          final label = formatHourLabel(
+                            hour,
+                            widget.l10n,
+                            use24HourTime: widget.schedule.use24HourTime,
                           );
                           return SizedBox(
                             height: hourHeight,
@@ -168,22 +210,95 @@ class _WeeklyTabState extends State<WeeklyTab> {
                     ),
                   ),
                   ...activeDays.map((day) {
-                    final items = byDay[day] ?? const <Lecture>[];
+                    final colDate = _dateForDay(day, activeDays);
+                    final afterSem = colDate.isAfter(endD);
+                    final isSemesterEndDay = colDate.year == endD.year &&
+                        colDate.month == endD.month &&
+                        colDate.day == endD.day;
+                    final noClassKey = scheduleDateKey(colDate);
+                    final markedNoClass = widget.schedule.noClassDateKeys
+                        .contains(noClassKey);
+                    final rawItems = byDay[day] ?? const <Lecture>[];
+                    final items = rawItems
+                        .where((l) => !l.date.isAfter(endD))
+                        .toList();
                     return SizedBox(
                       width: cellWidth,
                       child: Column(
                         children: [
-                          SizedBox(
-                            height: dayHeaderHeight,
-                            child: Center(
-                              child: Text(
-                                '${weekdayLabelL10n(day, widget.l10n)} ${_dateForDay(day, activeDays).day}/${_dateForDay(day, activeDays).month}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: compactTile ? 10 : 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                          Material(
+                            color: afterSem
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withValues(alpha: 0.85)
+                                : Colors.transparent,
+                            child: InkWell(
+                              onTap: afterSem
+                                  ? null
+                                  : () => _onDayHeaderTap(context, colDate),
+                              child: Builder(
+                                builder: (ctx) {
+                                  Widget inner = Container(
+                                    height: dayHeaderHeight,
+                                    decoration: BoxDecoration(
+                                      border: isSemesterEndDay
+                                          ? Border(
+                                              top: BorderSide(
+                                                color: Theme.of(ctx)
+                                                    .colorScheme
+                                                    .tertiary,
+                                                width: 3,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 2),
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (markedNoClass)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsetsDirectional
+                                                      .only(end: 2),
+                                              child: Icon(
+                                                Icons.event_busy,
+                                                size: compactTile ? 11 : 13,
+                                              ),
+                                            ),
+                                          Flexible(
+                                            child: Text(
+                                              afterSem
+                                                  ? widget
+                                                      .l10n.afterSemesterShort
+                                                  : '${weekdayLabelL10n(day, widget.l10n)} ${colDate.day}/${colDate.month}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: compactTile ? 10 : 12,
+                                              ),
+                                              maxLines: 2,
+                                              textAlign: TextAlign.center,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                  if (isSemesterEndDay && !afterSem) {
+                                    inner = Tooltip(
+                                      message:
+                                          widget.l10n.semesterEndsThisDay,
+                                      child: inner,
+                                    );
+                                  }
+                                  return inner;
+                                },
                               ),
                             ),
                           ),
@@ -192,148 +307,175 @@ class _WeeklyTabState extends State<WeeklyTab> {
                             child: RepaintBoundary(
                               child: Stack(
                                 children: [
-                                ...List.generate(
-                                  totalHours,
-                                  (index) => Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    top: index * hourHeight,
-                                    child: const Divider(height: 1),
-                                  ),
-                                ),
-                                if (isCurrentWeek &&
-                                    nowTop >= 0 &&
-                                    nowTop <= gridHeight &&
-                                    _dateForDay(day, activeDays).year ==
-                                        now.year &&
-                                    _dateForDay(day, activeDays).month ==
-                                        now.month &&
-                                    _dateForDay(day, activeDays).day == now.day)
-                                  Positioned(
-                                    left: 0,
-                                    right: 0,
-                                    top: nowTop,
-                                    child: Container(
-                                      height: 2,
-                                      color: Colors.redAccent,
+                                  ...List.generate(
+                                    totalHours,
+                                    (index) => Positioned(
+                                      left: 0,
+                                      right: 0,
+                                      top: index * hourHeight,
+                                      child: const Divider(height: 1),
                                     ),
                                   ),
-                                ...items.map((lecture) {
-                                  final startM = _toMinutes(lecture.start);
-                                  final endM = _toMinutes(lecture.end);
-                                  final top =
-                                      ((startM - (8 * 60)) / 60.0) * hourHeight;
-                                  final height = ((endM - startM) / 60.0) *
-                                      hourHeight;
-                                  return Positioned(
-                                    left: compactTile ? 2 : 6,
-                                    right: compactTile ? 2 : 6,
-                                    top: top.clamp(0, gridHeight - 24),
-                                    height: height.clamp(
-                                      30,
-                                      (hourHeight * 6).clamp(48, 200),
-                                    ),
-                                    child: GestureDetector(
-                                      onTap: () => _onGridTap(context, lecture),
+                                  if (isCurrentWeek &&
+                                      nowTop >= 0 &&
+                                      nowTop <= gridHeight &&
+                                      colDate.year == now.year &&
+                                      colDate.month == now.month &&
+                                      colDate.day == now.day)
+                                    Positioned(
+                                      left: 0,
+                                      right: 0,
+                                      top: nowTop,
                                       child: Container(
-                                        padding: EdgeInsets.all(
-                                          compactTile ? 4 : 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: tileBackgroundForCourse(
-                                            lecture.color,
-                                            context,
-                                          ),
-                                          border: Border.all(
-                                            color: statusColor(lecture.status),
-                                            width: 1.2,
-                                          ),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        clipBehavior: Clip.hardEdge,
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            return FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              alignment: Alignment.topLeft,
-                                              child: ConstrainedBox(
-                                                constraints: BoxConstraints(
-                                                  maxWidth: constraints.maxWidth,
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Container(
-                                                      width: double.infinity,
-                                                      height: 4,
-                                                      decoration: BoxDecoration(
-                                                        color: statusColor(
-                                                            lecture.status),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(3),
-                                                      ),
-                                                    ),
-                                                    SizedBox(
-                                                        height:
-                                                            compactTile ? 2 : 4),
-                                                    FittedBox(
-                                                      fit: BoxFit.scaleDown,
-                                                      alignment:
-                                                          Alignment.topLeft,
-                                                      child: Text(
-                                                        localizeCourseName(
-                                                          lecture.courseName,
-                                                          widget.l10n,
-                                                        ),
-                                                        maxLines: 2,
-                                                        softWrap: true,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          fontSize: compactTile
-                                                              ? 9
-                                                              : 11,
-                                                          height: 1.1,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      formatTimeRange(
-                                                        lecture.start,
-                                                        lecture.end,
-                                                        widget.l10n,
-                                                      ),
-                                                      style: TextStyle(
-                                                        fontSize:
-                                                            compactTile ? 9 : 11,
-                                                      ),
-                                                    ),
-                                                    if (widget.schedule
-                                                        .enableMeetingNumbers)
-                                                      Text(
-                                                        '#${effectiveMeetingNumber(lecture, widget.allLectures)}',
-                                                        style: TextStyle(
-                                                          fontSize:
-                                                              compactTile ? 9 : 11,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                        height: 2,
+                                        color: Colors.redAccent,
                                       ),
                                     ),
-                                  );
-                                }),
+                                  ...items.map((lecture) {
+                                    final startM = _toMinutes(lecture.start);
+                                    final endM = _toMinutes(lecture.end);
+                                    final top =
+                                        ((startM - (8 * 60)) / 60.0) *
+                                            hourHeight;
+                                    final height = ((endM - startM) / 60.0) *
+                                        hourHeight;
+                                    return Positioned(
+                                      left: compactTile ? 2 : 6,
+                                      right: compactTile ? 2 : 6,
+                                      top: top.clamp(0, gridHeight - 24),
+                                      height: height.clamp(
+                                        30,
+                                        (hourHeight * 6).clamp(48, 200),
+                                      ),
+                                      child: GestureDetector(
+                                        onTap: () =>
+                                            _onGridTap(context, lecture),
+                                        child: Container(
+                                          padding: EdgeInsets.all(
+                                            compactTile ? 4 : 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: tileBackgroundForCourse(
+                                              lecture.color,
+                                              context,
+                                            ),
+                                            border: Border.all(
+                                              color:
+                                                  statusColor(lecture.status),
+                                              width: 1.2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          clipBehavior: Clip.hardEdge,
+                                          child: LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              return FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                alignment: Alignment.topLeft,
+                                                child: ConstrainedBox(
+                                                  constraints: BoxConstraints(
+                                                    maxWidth:
+                                                        constraints.maxWidth,
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      if (!titleOnlyTile)
+                                                        Container(
+                                                          width: double.infinity,
+                                                          height: 4,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: statusColor(
+                                                                lecture
+                                                                    .status),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        3),
+                                                          ),
+                                                        ),
+                                                      if (!titleOnlyTile)
+                                                        SizedBox(
+                                                            height: compactTile
+                                                                ? 2
+                                                                : 4),
+                                                      FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        alignment:
+                                                            Alignment.topLeft,
+                                                        child: Text(
+                                                          localizeCourseName(
+                                                            lecture.courseName,
+                                                            widget.l10n,
+                                                          ),
+                                                          maxLines:
+                                                              titleOnlyTile
+                                                                  ? 1
+                                                                  : 2,
+                                                          softWrap: true,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            fontSize:
+                                                                titleOnlyTile
+                                                                    ? 10
+                                                                    : (compactTile
+                                                                        ? 9
+                                                                        : 11),
+                                                            height: 1.1,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      if (!titleOnlyTile) ...[
+                                                        Text(
+                                                          formatTimeRange(
+                                                            lecture.start,
+                                                            lecture.end,
+                                                            widget.l10n,
+                                                            use24HourTime:
+                                                                widget.schedule
+                                                                    .use24HourTime,
+                                                          ),
+                                                          style: TextStyle(
+                                                            fontSize:
+                                                                compactTile
+                                                                    ? 9
+                                                                    : 11,
+                                                          ),
+                                                        ),
+                                                        if (widget.schedule
+                                                            .enableMeetingNumbers)
+                                                          Text(
+                                                            '#${effectiveMeetingNumber(lecture, widget.allLectures)}',
+                                                            style: TextStyle(
+                                                              fontSize:
+                                                                  compactTile
+                                                                      ? 9
+                                                                      : 11,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
                                 ],
                               ),
                             ),
@@ -347,331 +489,88 @@ class _WeeklyTabState extends State<WeeklyTab> {
             ),
           ),
         );
+        return grid;
       },
     );
   }
 
-  Future<void> _tryLaunchUrl(BuildContext context, String raw) async {
-    var url = raw.trim();
-    if (url.isEmpty) return;
-    if (!url.contains('://')) {
-      url = 'https://$url';
-    }
-    final uri = Uri.tryParse(url);
-    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.l10n.openLinkFailed)),
-        );
-      }
-      return;
-    }
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.l10n.openLinkFailed)),
-      );
-    }
+  Future<void> _onGridTap(BuildContext context, Lecture lecture) async {
+    await showLectureDetailEditor(
+      context,
+      schedule: widget.schedule,
+      lecture: lecture,
+      allLectures: widget.allLectures,
+      l10n: widget.l10n,
+      onStatus: widget.onStatus,
+      onMeetingLinksSaved: widget.onMeetingLinksSaved,
+    );
+    if (mounted) setState(() {});
   }
 
-  List<Widget> _resourceEditorSection(
-    BuildContext context,
-    void Function(void Function()) setLocal,
-    Course course,
-    Meeting? meeting,
-    List<NamedLink> draftMeetingLinks,
-  ) {
+  Future<void> _onDayHeaderTap(BuildContext context, DateTime columnDate) async {
+    final key = scheduleDateKey(columnDate);
+    final marked = widget.schedule.noClassDateKeys.contains(key);
     final l10n = widget.l10n;
-    final tiles = <Widget>[
-      const SizedBox(height: 16),
-      Text(
-        l10n.resourcesSection,
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
-    ];
-    if (course.link.trim().isNotEmpty) {
-      tiles.add(
-        ListTile(
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          title: Text(l10n.primaryCourseLink),
-          subtitle: Text(
-            course.link,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          trailing: const Icon(Icons.open_in_new, size: 20),
-          onTap: () => _tryLaunchUrl(context, course.link),
-        ),
-      );
-    }
-    for (final l in course.extraLinks) {
-      if (l.url.trim().isEmpty) continue;
-      tiles.add(
-        ListTile(
-          dense: true,
-          contentPadding: EdgeInsets.zero,
-          title: Text(l.title.trim().isEmpty ? l.url : l.title),
-          subtitle: Text(l.url, maxLines: 2, overflow: TextOverflow.ellipsis),
-          trailing: const Icon(Icons.open_in_new, size: 20),
-          onTap: () => _tryLaunchUrl(context, l.url),
-        ),
-      );
-    }
-    if (meeting != null) {
-      tiles.addAll([
-        const SizedBox(height: 8),
-        Text(
-          l10n.meetingLinksSection,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        Text(
-          l10n.editMeetingResourcesHint,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final useDialog = Adaptive.isDesktop(context) || Adaptive.isWebLike(context);
+    final pick = useDialog
+        ? await showDialog<String>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.dayOptionsTitle),
+              content: Text(
+                formatLectureDateMedium(columnDate, l10n),
+                style: Theme.of(ctx).textTheme.titleSmall,
               ),
-        ),
-        const SizedBox(height: 8),
-      ]);
-      tiles.addAll(
-        draftMeetingLinks.map(
-          (link) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    key: ObjectKey(link),
-                    initialValue: link.title,
-                    decoration: InputDecoration(
-                      labelText: l10n.linkTitleLabel,
-                      isDense: true,
-                    ),
-                    onChanged: (v) => link.title = v,
-                  ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.cancel),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    key: ValueKey('${identityHashCode(link)}_url'),
-                    initialValue: link.url,
-                    decoration: InputDecoration(
-                      labelText: l10n.linkUrlLabel,
-                      isDense: true,
-                    ),
-                    onChanged: (v) => link.url = v,
+                if (marked)
+                  FilledButton.tonal(
+                    onPressed: () => Navigator.pop(ctx, 'clear'),
+                    child: Text(l10n.clearNoClassDay),
                   ),
-                ),
-                IconButton(
-                  onPressed: () =>
-                      setLocal(() => draftMeetingLinks.remove(link)),
-                  icon: const Icon(Icons.remove_circle_outline),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, 'mark'),
+                  child: Text(l10n.markNoClassDay),
                 ),
               ],
             ),
-          ),
-        ),
-      );
-      tiles.add(
-        OutlinedButton.icon(
-          onPressed: () => setLocal(
-            () => draftMeetingLinks.add(NamedLink(title: '', url: '')),
-          ),
-          icon: const Icon(Icons.add_link, size: 18),
-          label: Text(l10n.addNamedLink),
-        ),
-      );
-    }
-    return tiles;
-  }
-
-  void _onGridTap(BuildContext context, Lecture lecture) async {
-    final course = courseById(widget.schedule, lecture.courseId);
-    final meeting =
-        course != null ? meetingForLecture(course, lecture) : null;
-    final draftMeetingLinks = <NamedLink>[];
-    if (meeting != null) {
-      for (final l in meeting.links) {
-        draftMeetingLinks.add(NamedLink(title: l.title, url: l.url));
-      }
-    }
-    final options = [
-      (LectureStatus.pending, widget.l10n.statusPending),
-      (LectureStatus.attended, widget.l10n.markAttended),
-      (LectureStatus.watchedRecording, widget.l10n.markWatchedRecording),
-      (LectureStatus.missed, widget.l10n.markMissed),
-      (LectureStatus.skipped, widget.l10n.markSkipped),
-      (LectureStatus.canceled, widget.l10n.markCanceled),
-    ];
-    var selected = lecture.status;
-    var hasRecording = (lecture.recordingLink ?? '').trim().isNotEmpty;
-    final ctrl = TextEditingController(text: lecture.recordingLink ?? '');
-    final useDialog = Adaptive.isDesktop(context) || Adaptive.isWebLike(context);
-    final bool? saved = useDialog
-        ? await showDialog<bool>(
+          )
+        : await showModalBottomSheet<String>(
             context: context,
-            builder: (_) => StatefulBuilder(
-              builder: (context, setLocal) => AlertDialog(
-                title: Text(widget.l10n.lectureDetailsTitle),
-                content: SizedBox(
-                  width: 460,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${localizeCourseName(lecture.courseName, widget.l10n)} • ${lecture.type}${widget.schedule.enableMeetingNumbers ? ' • #${effectiveMeetingNumber(lecture, widget.allLectures)}' : ''}',
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<LectureStatus>(
-                          initialValue: selected,
-                          decoration: InputDecoration(
-                            labelText: widget.l10n.statusLabel,
-                          ),
-                          items: options
-                              .map(
-                                (entry) => DropdownMenuItem(
-                                  value: entry.$1,
-                                  child: Row(
-                                    children: [
-                                      Icon(statusIcon(entry.$1)),
-                                      const SizedBox(width: 8),
-                                      Text(entry.$2),
-                                    ],
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) => setLocal(() => selected = v!),
-                        ),
-                        const SizedBox(height: 8),
-                        CheckboxListTile(
-                          value: hasRecording,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (v) => setLocal(() => hasRecording = v!),
-                          title: Text(widget.l10n.addRecordingLink),
-                        ),
-                        if (hasRecording)
-                          TextField(
-                            controller: ctrl,
-                            decoration: InputDecoration(
-                              labelText: widget.l10n.recordingLink,
-                            ),
-                          ),
-                        if (course != null)
-                          ..._resourceEditorSection(
-                            context,
-                            setLocal,
-                            course,
-                            meeting,
-                            draftMeetingLinks,
-                          ),
-                      ],
+            builder: (ctx) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ListTile(
+                    title: Text(l10n.dayOptionsTitle),
+                    subtitle: Text(formatLectureDateMedium(columnDate, l10n)),
+                  ),
+                  if (marked)
+                    ListTile(
+                      leading: const Icon(Icons.event_available_outlined),
+                      title: Text(l10n.clearNoClassDay),
+                      onTap: () => Navigator.pop(ctx, 'clear'),
                     ),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(widget.l10n.cancel),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(widget.l10n.save),
+                  ListTile(
+                    leading: const Icon(Icons.event_busy),
+                    title: Text(l10n.markNoClassDay),
+                    subtitle: Text(l10n.markNoClassDaySubtitle),
+                    onTap: () => Navigator.pop(ctx, 'mark'),
                   ),
                 ],
               ),
             ),
-          )
-        : await showModalBottomSheet<bool>(
-            context: context,
-            isScrollControlled: true,
-            builder: (_) => SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: StatefulBuilder(
-                  builder: (context, setLocal) => SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${localizeCourseName(lecture.courseName, widget.l10n)} • ${lecture.type}${widget.schedule.enableMeetingNumbers ? ' • #${effectiveMeetingNumber(lecture, widget.allLectures)}' : ''}',
-                        ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<LectureStatus>(
-                          initialValue: selected,
-                          decoration: InputDecoration(
-                            labelText: widget.l10n.statusLabel,
-                          ),
-                          items: options
-                              .map(
-                                (entry) => DropdownMenuItem(
-                                  value: entry.$1,
-                                  child: Row(
-                                    children: [
-                                      Icon(statusIcon(entry.$1)),
-                                      const SizedBox(width: 8),
-                                      Text(entry.$2),
-                                    ],
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) => setLocal(() => selected = v!),
-                        ),
-                        CheckboxListTile(
-                          value: hasRecording,
-                          contentPadding: EdgeInsets.zero,
-                          onChanged: (v) => setLocal(() => hasRecording = v!),
-                          title: Text(widget.l10n.addRecordingLink),
-                        ),
-                        if (hasRecording)
-                          TextField(
-                            controller: ctrl,
-                            decoration: InputDecoration(
-                              labelText: widget.l10n.recordingLink,
-                            ),
-                          ),
-                        if (course != null)
-                          ..._resourceEditorSection(
-                            context,
-                            setLocal,
-                            course,
-                            meeting,
-                            draftMeetingLinks,
-                          ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: FilledButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: Text(widget.l10n.save),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
           );
-    if (saved == true) {
-      widget.onStatus(lecture, selected);
-      lecture.recordingLink = hasRecording ? ctrl.text.trim() : null;
-      if (course != null && meeting != null) {
-        widget.onMeetingLinksSaved(
-          course,
-          meeting,
-          draftMeetingLinks
-              .map((l) => NamedLink(title: l.title.trim(), url: l.url.trim()))
-              .where((l) => l.title.isNotEmpty || l.url.isNotEmpty)
-              .toList(),
-        );
-      }
+    if (!context.mounted) return;
+    if (pick == 'mark') {
+      widget.onMarkNoClassDay(columnDate);
+      if (mounted) setState(() {});
+    } else if (pick == 'clear') {
+      widget.onClearNoClassDay(columnDate);
       if (mounted) setState(() {});
     }
   }

@@ -28,10 +28,14 @@ class DashboardShell extends StatelessWidget {
     required this.onOpenCourseEditor,
     required this.onOpenManageCourses,
     required this.onMeetingLinksSaved,
+    required this.onLectureDetail,
+    required this.onMarkNoClassDay,
+    required this.onClearNoClassDay,
     required this.onChangeLanguage,
     required this.onChangeWeekStart,
     required this.onChangeVisibleDays,
     required this.onToggleMeetingNumbers,
+    required this.onUse24HourTimeChanged,
     required this.onChangeStartDate,
     required this.onChangeEndDate,
     required this.themeMode,
@@ -55,10 +59,15 @@ class DashboardShell extends StatelessWidget {
   final void Function(BuildContext context) onOpenManageCourses;
   final void Function(Course course, Meeting meeting, List<NamedLink> links)
       onMeetingLinksSaved;
+  final Future<void> Function(BuildContext context, Lecture lecture)
+      onLectureDetail;
+  final ValueChanged<DateTime> onMarkNoClassDay;
+  final ValueChanged<DateTime> onClearNoClassDay;
   final ValueChanged<String> onChangeLanguage;
   final ValueChanged<int> onChangeWeekStart;
   final ValueChanged<Set<int>> onChangeVisibleDays;
   final ValueChanged<bool> onToggleMeetingNumbers;
+  final ValueChanged<bool> onUse24HourTimeChanged;
   final ValueChanged<DateTime> onChangeStartDate;
   final ValueChanged<DateTime> onChangeEndDate;
   final ThemeMode themeMode;
@@ -163,6 +172,8 @@ class DashboardShell extends StatelessWidget {
                         weekSyncToken: weeklyWeekSyncToken,
                         onStatus: onStatus,
                         onMeetingLinksSaved: onMeetingLinksSaved,
+                        onMarkNoClassDay: onMarkNoClassDay,
+                        onClearNoClassDay: onClearNoClassDay,
                         l10n: l10n,
                       ),
                       DashboardTab.lectures => LecturesTab(
@@ -171,6 +182,7 @@ class DashboardShell extends StatelessWidget {
                         showMeetingNumber: schedule.enableMeetingNumbers,
                         l10n: l10n,
                         onStatus: onStatus,
+                        onLectureDetail: onLectureDetail,
                         focusSearchToken: lecturesSearchFocusToken,
                       ),
                       DashboardTab.stats => StatsTab(
@@ -185,6 +197,7 @@ class DashboardShell extends StatelessWidget {
                         onChangeWeekStart: onChangeWeekStart,
                         onChangeVisibleDays: onChangeVisibleDays,
                         onToggleMeetingNumbers: onToggleMeetingNumbers,
+                        onUse24HourTimeChanged: onUse24HourTimeChanged,
                         onChangeStartDate: onChangeStartDate,
                         onChangeEndDate: onChangeEndDate,
                         themeMode: themeMode,

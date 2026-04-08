@@ -1,21 +1,30 @@
-# Download artifacts (local builds)
+# Release build outputs (scripts)
 
-Release binaries are **not committed** to git. Generate them from the repo root:
+Release binaries are **not** stored in this repo.
+
+From the **repository root**, run:
 
 ```bash
 ./scripts/build-download-linux.sh
 ./scripts/build-download-android.sh
 ```
 
-Outputs appear here:
+By default, artifacts go to your **Linux Downloads** folder (`xdg-user-dir DOWNLOAD`, or `~/Downloads`):
 
-- `leccheck-linux-x64-<version>.tar.gz` — extract and run the `bundle/leccheck` binary (see Flutter Linux deploy docs).
-- `leccheck-android-<version>.apk` — side-load or distribute outside the Play Store.
+- `leccheck-linux-x64-<version>.tar.gz` — extract and run `bundle/leccheck`
+- `leccheck-android-<version>.apk` — side-load or share outside the Play Store
 
-Override the Flutter SDK path:
+Override the output directory:
 
 ```bash
-FLUTTER_BIN=/path/to/flutter/bin/flutter ./scripts/build-download-linux.sh
+LEC_CHECK_OUT_DIR=/tmp ./scripts/build-download-linux.sh
 ```
 
-For Play Store uploads, build an **AAB** separately: `cd flutter_app && flutter build appbundle`.
+If `flutter` is on your `PATH`, the scripts use it automatically. Otherwise:
+
+```bash
+export FLUTTER_BIN=/path/to/flutter/bin/flutter
+./scripts/build-download-linux.sh
+```
+
+For **Google Play**, build an **AAB**: `cd flutter_app && flutter build appbundle`.

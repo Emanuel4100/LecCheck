@@ -15,6 +15,7 @@
       "message": {"type": "String"}
     }
   },
+  "signInAndroidConfigHint": "Google Sign-In needs your app’s SHA-1 in Firebase. Console → Project settings → Your Android app → Add fingerprint. Then run: cd android && ./gradlew signingReport (use the SHA-1 under Variant: debug).",
   "cloudComingSoonMessage": "Cloud login (Google/Firebase) will be added later.",
   "semesterSetupTitle": "New Semester Setup",
   "startDate": "Start date",
@@ -182,5 +183,18 @@
   "openLinkFailed": "Could not open link",
   "resourcesSection": "Resources",
   "primaryCourseLink": "Course website",
-  "editMeetingResourcesHint": "Changes apply to every week for this meeting slot."
+  "editMeetingResourcesHint": "Changes apply to every week for this meeting slot.",
+  "lectureNotesLabel": "Notes for this session",
+  "lectureNotesHint": "Prep, assignments, reminders…",
+  "use24HourTimeTitle": "24-hour time",
+  "use24HourTimeSubtitle": "Off: AM/PM (locale style). On: 14:30 style.",
+  "dayOptionsTitle": "Day options",
+  "markNoClassDay": "No class (cancel all)",
+  "markNoClassDaySubtitle": "Marks every session this day as canceled.",
+  "clearNoClassDay": "Restore normal day",
+  "afterSemesterShort": "After term",
+  "semesterEndsThisDay": "Semester ends",
+  "gridZoomIn": "Zoom grid in",
+  "gridZoomOut": "Zoom grid out",
+  "gridZoomReset": "Reset grid zoom"
 }

@@ -238,10 +238,36 @@ DateTime _parseTime(String value) {
   );
 }
 
-String formatTimeRange(String start, String end, AppLocalizations l10n) {
+String formatTimeRange(
+  String start,
+  String end,
+  AppLocalizations l10n, {
+  required bool use24HourTime,
+}) {
   final locale = l10n.localeName;
-  final fmt = DateFormat.jm(locale);
+  final fmt = use24HourTime ? DateFormat.Hm(locale) : DateFormat.jm(locale);
   return '${fmt.format(_parseTime(start))} - ${fmt.format(_parseTime(end))}';
+}
+
+/// Single clock hour label (e.g. weekly grid time axis).
+String formatHourLabel(
+  int hour,
+  AppLocalizations l10n, {
+  required bool use24HourTime,
+}) {
+  final locale = l10n.localeName;
+  final dt = DateTime(2000, 1, 1, hour.clamp(0, 23), 0);
+  return use24HourTime
+      ? DateFormat.Hm(locale).format(dt)
+      : DateFormat.jm(locale).format(dt);
+}
+
+String formatLectureDateMedium(
+  DateTime date,
+  AppLocalizations l10n,
+) {
+  final locale = l10n.localeName;
+  return DateFormat.yMMMd(locale).format(date);
 }
 
 int effectiveMeetingNumber(Lecture lecture, List<Lecture> allLectures) {

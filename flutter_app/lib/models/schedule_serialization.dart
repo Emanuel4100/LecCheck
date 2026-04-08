@@ -69,6 +69,7 @@ Map<String, dynamic> _lectureToJson(Lecture l) => {
       'status': _lectureStatusName(l.status),
       'recordingLink': l.recordingLink,
       'meetingId': l.meetingId,
+      if (l.notes.isNotEmpty) 'notes': l.notes,
     };
 
 Lecture _lectureFromJson(Map<String, dynamic> m) {
@@ -88,6 +89,7 @@ Lecture _lectureFromJson(Map<String, dynamic> m) {
     status: _lectureStatusFromName(m['status'] as String?),
     recordingLink: m['recordingLink'] as String?,
     meetingId: m['meetingId'] as String?,
+    notes: m['notes'] as String? ?? '',
   );
 }
 
@@ -152,6 +154,8 @@ Map<String, dynamic> scheduleBundleToJson(
     'weekStartsOn': schedule.weekStartsOn,
     'visibleWeekdays': schedule.visibleWeekdays.toList()..sort(),
     'enableMeetingNumbers': schedule.enableMeetingNumbers,
+    'noClassDates': schedule.noClassDateKeys.toList()..sort(),
+    'use24HourTime': schedule.use24HourTime,
     'courses': schedule.courses.map(_courseToJson).toList(),
   };
 }
@@ -176,6 +180,11 @@ SemesterSchedule? scheduleBundleFromJson(Map<String, dynamic>? raw) {
             .toSet() ??
         {1, 2, 3, 4, 5, 6, 7},
     enableMeetingNumbers: raw['enableMeetingNumbers'] as bool? ?? true,
+    noClassDateKeys: (raw['noClassDates'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toSet() ??
+        <String>{},
+    use24HourTime: raw['use24HourTime'] as bool? ?? false,
   );
 
   final courses = raw['courses'] as List<dynamic>? ?? [];
