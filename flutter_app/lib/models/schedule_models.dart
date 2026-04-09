@@ -160,6 +160,37 @@ class SemesterSchedule {
   final List<Course> courses = [];
 }
 
+/// One named semester inside [ScheduleRootState] (switchable archive).
+class SemesterSlot {
+  SemesterSlot({
+    required this.id,
+    required this.name,
+    required this.schedule,
+  });
+
+  final String id;
+  String name;
+  SemesterSchedule schedule;
+}
+
+/// Full persisted app state: one or more semesters; exactly one active.
+class ScheduleRootState {
+  ScheduleRootState({
+    required this.slots,
+    required this.activeSemesterId,
+  }) : assert(slots.isNotEmpty, 'ScheduleRootState requires at least one semester');
+
+  final List<SemesterSlot> slots;
+  String activeSemesterId;
+
+  SemesterSchedule get activeSchedule {
+    for (final s in slots) {
+      if (s.id == activeSemesterId) return s.schedule;
+    }
+    return slots.first.schedule;
+  }
+}
+
 /// Stable local date key for [SemesterSchedule.noClassDateKeys].
 String scheduleDateKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

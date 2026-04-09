@@ -140,6 +140,30 @@ abstract class AppLocalizations {
   /// **'Continue with Google'**
   String get continueWithGoogle;
 
+  /// No description provided for @syncConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync conflict'**
+  String get syncConflictTitle;
+
+  /// No description provided for @syncConflictBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This device and your Google account both have different schedule data. Which copy should we keep?'**
+  String get syncConflictBody;
+
+  /// No description provided for @syncConflictUseDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this device'**
+  String get syncConflictUseDevice;
+
+  /// No description provided for @syncConflictUseCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Use account data'**
+  String get syncConflictUseCloud;
+
   /// No description provided for @continueWithGoogleUnavailable.
   ///
   /// In en, this message translates to:
@@ -464,6 +488,24 @@ abstract class AppLocalizations {
   /// **'Course name'**
   String get courseName;
 
+  /// No description provided for @courseColorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Course color'**
+  String get courseColorLabel;
+
+  /// No description provided for @pickColorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a color'**
+  String get pickColorTitle;
+
+  /// No description provided for @moreColors.
+  ///
+  /// In en, this message translates to:
+  /// **'More colors'**
+  String get moreColors;
+
   /// No description provided for @courseCode.
   ///
   /// In en, this message translates to:
@@ -577,6 +619,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Auto meeting numbers'**
   String get autoMeetingNumbers;
+
+  /// No description provided for @semesterDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Semester'**
+  String get semesterDefaultName;
+
+  /// No description provided for @semestersSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Semesters'**
+  String get semestersSectionTitle;
+
+  /// No description provided for @semestersSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between terms or add another schedule.'**
+  String get semestersSectionSubtitle;
+
+  /// No description provided for @activeSemesterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active semester'**
+  String get activeSemesterLabel;
+
+  /// No description provided for @addSemesterButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add semester'**
+  String get addSemesterButton;
+
+  /// No description provided for @newSemesterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New semester'**
+  String get newSemesterTitle;
+
+  /// No description provided for @semesterNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Semester name'**
+  String get semesterNameLabel;
+
+  /// No description provided for @deleteSemesterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete semester?'**
+  String get deleteSemesterTitle;
+
+  /// No description provided for @deleteSemesterBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes only this semester from the list. Exported backups are unchanged.'**
+  String get deleteSemesterBody;
+
+  /// No description provided for @renameSemesterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename semester'**
+  String get renameSemesterTitle;
 
   /// No description provided for @semesterStart.
   ///
@@ -719,7 +821,7 @@ abstract class AppLocalizations {
   /// No description provided for @lecturesTabNeedAttention.
   ///
   /// In en, this message translates to:
-  /// **'Need attention'**
+  /// **'Action queue'**
   String get lecturesTabNeedAttention;
 
   /// No description provided for @lecturesTabUpcoming.
@@ -1160,6 +1262,120 @@ abstract class AppLocalizations {
   /// **'Restore normal day'**
   String get clearNoClassDay;
 
+  /// No description provided for @vacationsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Holidays & vacations'**
+  String get vacationsSectionTitle;
+
+  /// No description provided for @vacationsSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark date ranges as no-class (all sessions canceled).'**
+  String get vacationsSectionSubtitle;
+
+  /// No description provided for @addVacationRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Add vacation range'**
+  String get addVacationRange;
+
+  /// No description provided for @noClassDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No no-class days} one{1 no-class day} other{{count} no-class days}}'**
+  String noClassDaysCount(int count);
+
+  /// No description provided for @clearAllNoClassDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all no-class days'**
+  String get clearAllNoClassDays;
+
+  /// No description provided for @clearAllNoClassDaysConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove every no-class mark and set those sessions back to pending?'**
+  String get clearAllNoClassDaysConfirm;
+
+  /// No description provided for @exportDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export schedule'**
+  String get exportDataTitle;
+
+  /// No description provided for @exportDataSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share a JSON backup of all semesters.'**
+  String get exportDataSubtitle;
+
+  /// No description provided for @importDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import schedule'**
+  String get importDataTitle;
+
+  /// No description provided for @importDataSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace this device with a JSON backup (current data is overwritten).'**
+  String get importDataSubtitle;
+
+  /// No description provided for @importInvalidFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read that file. Use a LecCheck export JSON.'**
+  String get importInvalidFile;
+
+  /// No description provided for @importReplaceConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace all data?'**
+  String get importReplaceConfirmTitle;
+
+  /// No description provided for @importReplaceConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This overwrites every semester on this device with the imported file. Synced accounts will update after save.'**
+  String get importReplaceConfirmBody;
+
+  /// No description provided for @meetingNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'After-class reminders'**
+  String get meetingNotifTitle;
+
+  /// No description provided for @meetingNotifSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask how class went a few minutes after each session ends (this device only).'**
+  String get meetingNotifSubtitle;
+
+  /// No description provided for @meetingNotifDelayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Minutes after end time'**
+  String get meetingNotifDelayLabel;
+
+  /// No description provided for @meetingNotifHeadsUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Heads-up style'**
+  String get meetingNotifHeadsUpTitle;
+
+  /// No description provided for @meetingNotifHeadsUpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher priority banner on Android when supported.'**
+  String get meetingNotifHeadsUpSubtitle;
+
+  /// No description provided for @meetingNotifUnavailablePlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting reminders are not available on this platform in this build.'**
+  String get meetingNotifUnavailablePlatform;
+
   /// No description provided for @afterSemesterShort.
   ///
   /// In en, this message translates to:
@@ -1189,6 +1405,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset grid zoom'**
   String get gridZoomReset;
+
+  /// No description provided for @gridPinchZoomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinch to zoom • double-tap to reset'**
+  String get gridPinchZoomHint;
 }
 
 class _AppLocalizationsDelegate

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/linkified_text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
 import 'dashboard_utils.dart';
@@ -105,6 +107,15 @@ class LectureCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (lecture.notes.trim().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        LinkifiedText(
+                          text: lecture.notes.trim(),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ],
                   ),
                 ),

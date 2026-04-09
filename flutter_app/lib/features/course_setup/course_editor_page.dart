@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/platform/adaptive.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/linkified_text.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
 import '../dashboard/dashboard_utils.dart' show weekdayLabelL10n;
@@ -110,6 +111,75 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
   }
 
+  static const List<Color> _quickPalette = <Color>[
+    Color(0xFF2A7BCC),
+    Color(0xFFD32F2F),
+    Color(0xFF388E3C),
+    Color(0xFFF57C00),
+    Color(0xFF7B1FA2),
+    Color(0xFF0097A7),
+    Color(0xFFC0CA33),
+    Color(0xFF5D4037),
+    Color(0xFF455A64),
+    Color(0xFFE91E63),
+    Color(0xFF3F51B5),
+    Color(0xFF795548),
+  ];
+
+  Future<void> _openFullPalette(BuildContext context, AppLocalizations l10n) async {
+    final extended = <Color>[
+      ..._quickPalette,
+      ...Colors.primaries.map((m) => m.shade600),
+      ...Colors.accents.map((m) => m.shade400),
+    ];
+    final colors = <Color>{...extended}.toList();
+    if (!context.mounted) return;
+    final picked = await showDialog<Color>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.pickColorTitle),
+        content: SizedBox(
+          width: 300,
+          height: 320,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 6,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+            ),
+            itemCount: colors.length,
+            itemBuilder: (context, i) {
+              final c = colors[i];
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.pop(ctx, c),
+                  customBorder: const CircleBorder(),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: c,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
+    );
+    if (picked != null && mounted) setState(() => _color = picked);
+  }
+
   void _addMeeting(AppLocalizations l10n) {
     final orderedDays = orderedWeekdaysForSchedule(widget.schedule);
     final startTimes = _timeOptions();
@@ -212,7 +282,11 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
     final startTimes = _timeOptions();
     final maxW = min(640.0, MediaQuery.sizeOf(context).width - 24);
 
+    final hPad = Adaptive.horizontalPadding(context);
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(
           widget.existing == null ? l10n.addCourse : l10n.editCourseTitle,
@@ -231,7 +305,12 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(Adaptive.horizontalPadding(context)),
+          padding: EdgeInsets.fromLTRB(
+            hPad,
+            hPad,
+            hPad,
+            hPad + bottomInset,
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxW),
             child: Column(
@@ -286,6 +365,62 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                     border: const OutlineInputBorder(),
                     alignLabelWithHint: true,
                   ),
+                ),
+                LinkifiedNotesPreview(controller: _notesCtrl),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.courseColorLabel,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    ..._quickPalette.map((c) {
+                      final selected = c == _color;
+                      return InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => setState(() => _color = c),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: c,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: selected
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant,
+                              width: selected ? 2.5 : 1,
+                            ),
+                          ),
+                          child: selected
+                              ? Icon(
+                                  Icons.check,
+                                  size: 20,
+                                  color: ThemeData.estimateBrightnessForColor(
+                                            c,
+                                          ) ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
+                                )
+                              : null,
+                        ),
+                      );
+                    }),
+                    Tooltip(
+                      message: l10n.moreColors,
+                      child: IconButton.filledTonal(
+                        onPressed: () => _openFullPalette(context, l10n),
+                        icon: const Icon(Icons.palette_outlined),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Text(

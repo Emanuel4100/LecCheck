@@ -41,6 +41,7 @@ class WeeklyTab extends StatefulWidget {
 class _WeeklyTabState extends State<WeeklyTab> {
   late DateTime _currentWeekStart;
   double _gridScale = 1.0;
+  double _pinchBaseScale = 1.0;
 
   @override
   void initState() {
@@ -61,6 +62,8 @@ class _WeeklyTabState extends State<WeeklyTab> {
   @override
   Widget build(BuildContext context) {
     final activeDays = orderedWeekdaysForSchedule(widget.schedule);
+    final usePinchZoom =
+        !Adaptive.isDesktop(context) && !Adaptive.isTablet(context);
     return Column(
       children: [
         Row(
@@ -92,40 +95,40 @@ class _WeeklyTabState extends State<WeeklyTab> {
             ),
           ],
         ),
-        if (!Adaptive.isDesktop(context) && !Adaptive.isTablet(context)) ...[
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                tooltip: widget.l10n.gridZoomOut,
-                onPressed: _gridScale > 0.65
-                    ? () => setState(() => _gridScale -= 0.1)
-                    : null,
-                icon: const Icon(Icons.zoom_out),
-              ),
-              Text('${(_gridScale * 100).round()}%'),
-              IconButton(
-                tooltip: widget.l10n.gridZoomIn,
-                onPressed: _gridScale < 1.45
-                    ? () => setState(() => _gridScale += 0.1)
-                    : null,
-                icon: const Icon(Icons.zoom_in),
-              ),
-              IconButton(
-                tooltip: widget.l10n.gridZoomReset,
-                onPressed:
-                    (_gridScale - 1.0).abs() > 0.01 ? () => setState(() => _gridScale = 1.0) : null,
-                icon: const Icon(Icons.fit_screen),
-              ),
-            ],
+        if (usePinchZoom) ...[
+          const SizedBox(height: 2),
+          Text(
+            widget.l10n.gridPinchZoomHint,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
         ],
         const SizedBox(height: 8),
         LinearProgressIndicator(value: widget.attendance),
         const SizedBox(height: 12),
         Expanded(
-          child: _buildGrid(context, activeDays),
+          child: usePinchZoom
+              ? GestureDetector(
+                  onScaleStart: (_) =>
+                      _pinchBaseScale = _gridScale.clamp(0.65, 1.45),
+                  onScaleUpdate: (details) {
+                    if (details.scale == 1.0) return;
+                    final next =
+                        (_pinchBaseScale * details.scale).clamp(0.65, 1.45);
+                    if ((next - _gridScale).abs() > 0.002) {
+                      setState(() => _gridScale = next);
+                    }
+                  },
+                  onDoubleTap: () {
+                    if ((_gridScale - 1.0).abs() > 0.01) {
+                      setState(() => _gridScale = 1.0);
+                    }
+                  },
+                  child: _buildGrid(context, activeDays),
+                )
+              : _buildGrid(context, activeDays),
         ),
       ],
     );

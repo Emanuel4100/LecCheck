@@ -1,6 +1,7 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
+#include <glib.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
@@ -24,6 +25,20 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+
+  {
+    gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
+    if (exe != nullptr) {
+      gchar* dir = g_path_get_dirname(exe);
+      gchar* icon_path = g_build_filename(dir, "data", "app_icon.png", nullptr);
+      if (g_file_test(icon_path, G_FILE_TEST_EXISTS)) {
+        gtk_window_set_icon_from_file(window, icon_path, nullptr);
+      }
+      g_free(icon_path);
+      g_free(dir);
+      g_free(exe);
+    }
+  }
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'schedule_models.dart';
 
 const int kScheduleBundleVersion = 1;
+const int kRootBundleVersion = 2;
 
 int _colorToArgb(Color c) {
   final a = (c.a * 255.0).round() & 0xff;
@@ -140,14 +141,8 @@ void _sortLectures(List<Lecture> lectures) {
   });
 }
 
-/// Full bundle for local disk and Firestore (map field).
-Map<String, dynamic> scheduleBundleToJson(
-  SemesterSchedule schedule, {
-  required int savedAtMillis,
-}) {
+Map<String, dynamic> _semesterPayloadToJson(SemesterSchedule schedule) {
   return {
-    'v': kScheduleBundleVersion,
-    'savedAt': savedAtMillis,
     'startDate': schedule.startDate.toIso8601String(),
     'endDate': schedule.endDate.toIso8601String(),
     'language': schedule.language,
@@ -160,12 +155,7 @@ Map<String, dynamic> scheduleBundleToJson(
   };
 }
 
-/// Returns null if missing or unsupported version.
-SemesterSchedule? scheduleBundleFromJson(Map<String, dynamic>? raw) {
-  if (raw == null) return null;
-  final v = (raw['v'] as num?)?.toInt();
-  if (v != kScheduleBundleVersion) return null;
-
+SemesterSchedule? _semesterScheduleFromPayloadMap(Map<String, dynamic> raw) {
   final start = DateTime.tryParse(raw['startDate'] as String? ?? '');
   final end = DateTime.tryParse(raw['endDate'] as String? ?? '');
   if (start == null || end == null) return null;
@@ -192,6 +182,92 @@ SemesterSchedule? scheduleBundleFromJson(Map<String, dynamic>? raw) {
     schedule.courses.add(_courseFromJson(Map<String, dynamic>.from(e as Map)));
   }
   return schedule;
+}
+
+Map<String, dynamic> _semesterSlotToJson(SemesterSlot slot) {
+  return {
+    'id': slot.id,
+    'name': slot.name,
+    ..._semesterPayloadToJson(slot.schedule),
+  };
+}
+
+SemesterSlot? _semesterSlotFromJson(Map<String, dynamic> raw) {
+  final id = raw['id'] as String? ?? '';
+  if (id.isEmpty) return null;
+  final name = raw['name'] as String? ?? 'Semester';
+  final sch = _semesterScheduleFromPayloadMap(raw);
+  if (sch == null) return null;
+  return SemesterSlot(id: id, name: name, schedule: sch);
+}
+
+/// v2 root: multiple semesters + active id. Use for local file and Firestore.
+Map<String, dynamic> scheduleRootToJson(
+  ScheduleRootState root, {
+  required int savedAtMillis,
+}) {
+  return {
+    'v': kRootBundleVersion,
+    'savedAt': savedAtMillis,
+    'activeSemesterId': root.activeSemesterId,
+    'semesters': root.slots.map(_semesterSlotToJson).toList(),
+  };
+}
+
+/// Parses v2 root or migrates legacy v1 single-semester file.
+ScheduleRootState? scheduleRootFromJson(Map<String, dynamic>? raw) {
+  if (raw == null) return null;
+  final v = (raw['v'] as num?)?.toInt() ?? 0;
+  if (v == kRootBundleVersion) {
+    final activeId = raw['activeSemesterId'] as String? ?? '';
+    final list = raw['semesters'] as List<dynamic>? ?? [];
+    final slots = <SemesterSlot>[];
+    for (final e in list) {
+      final slot = _semesterSlotFromJson(Map<String, dynamic>.from(e as Map));
+      if (slot != null) slots.add(slot);
+    }
+    if (slots.isEmpty) return null;
+    var active = activeId;
+    if (!slots.any((s) => s.id == active)) {
+      active = slots.first.id;
+    }
+    return ScheduleRootState(slots: slots, activeSemesterId: active);
+  }
+  if (v == kScheduleBundleVersion) {
+    final sch = _semesterScheduleFromPayloadMap(raw);
+    if (sch == null) return null;
+    const id = 'semester_1';
+    return ScheduleRootState(
+      slots: [SemesterSlot(id: id, name: 'Semester', schedule: sch)],
+      activeSemesterId: id,
+    );
+  }
+  return null;
+}
+
+/// Writes a single semester as a v2 root (one slot). Prefer [scheduleRootToJson] when possible.
+Map<String, dynamic> scheduleBundleToJson(
+  SemesterSchedule schedule, {
+  required int savedAtMillis,
+}) {
+  return scheduleRootToJson(
+    ScheduleRootState(
+      slots: [
+        SemesterSlot(
+          id: 'semester_1',
+          name: 'Semester',
+          schedule: schedule,
+        ),
+      ],
+      activeSemesterId: 'semester_1',
+    ),
+    savedAtMillis: savedAtMillis,
+  );
+}
+
+/// Active semester only; use [scheduleRootFromJson] when you need all slots.
+SemesterSchedule? scheduleBundleFromJson(Map<String, dynamic>? raw) {
+  return scheduleRootFromJson(raw)?.activeSchedule;
 }
 
 int? scheduleBundleSavedAt(Map<String, dynamic>? raw) {

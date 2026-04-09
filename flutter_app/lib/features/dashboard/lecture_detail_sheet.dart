@@ -1,34 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/platform/adaptive.dart';
+import '../../core/ui/keyboard_inset.dart';
+import '../../core/ui/linkified_text.dart';
+import '../../core/util/open_url.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
 import 'dashboard_utils.dart';
-
-Future<void> tryLaunchLectureUrl(BuildContext context, String raw) async {
-  var url = raw.trim();
-  if (url.isEmpty) return;
-  if (!url.contains('://')) {
-    url = 'https://$url';
-  }
-  final uri = Uri.tryParse(url);
-  final l10n = AppLocalizations.of(context)!;
-  if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.openLinkFailed)),
-      );
-    }
-    return;
-  }
-  final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!ok && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.openLinkFailed)),
-    );
-  }
-}
 
 List<Widget> buildLectureResourceEditorSection(
   BuildContext context,
@@ -51,10 +29,11 @@ List<Widget> buildLectureResourceEditorSection(
         dense: true,
         contentPadding: EdgeInsets.zero,
         title: Text(l10n.primaryCourseLink),
-        subtitle: Text(
-          course.link,
+        subtitle: LinkifiedText(
+          text: course.link,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: const Icon(Icons.open_in_new, size: 20),
         onTap: () => tryLaunchLectureUrl(context, course.link),
@@ -68,7 +47,12 @@ List<Widget> buildLectureResourceEditorSection(
         dense: true,
         contentPadding: EdgeInsets.zero,
         title: Text(l.title.trim().isEmpty ? l.url : l.title),
-        subtitle: Text(l.url, maxLines: 2, overflow: TextOverflow.ellipsis),
+        subtitle: LinkifiedText(
+          text: l.url,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         trailing: const Icon(Icons.open_in_new, size: 20),
         onTap: () => tryLaunchLectureUrl(context, l.url),
       ),
@@ -232,6 +216,7 @@ Future<void> showLectureDetailEditor(
                         minLines: 2,
                         maxLines: 6,
                       ),
+                      LinkifiedNotesPreview(controller: notesCtrl),
                       const SizedBox(height: 8),
                       CheckboxListTile(
                         value: hasRecording,
@@ -275,16 +260,10 @@ Future<void> showLectureDetailEditor(
       : await showModalBottomSheet<bool>(
           context: context,
           isScrollControlled: true,
-          builder: (_) => SafeArea(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: 12,
-                right: 12,
-                top: 12,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-              ),
-              child: StatefulBuilder(
-                builder: (context, setLocal) => SingleChildScrollView(
+          builder: (sheetContext) => wrapBottomSheetKeyboardPadding(
+            sheetContext: sheetContext,
+            child: StatefulBuilder(
+              builder: (context, setLocal) => SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,6 +313,7 @@ Future<void> showLectureDetailEditor(
                         minLines: 2,
                         maxLines: 6,
                       ),
+                      LinkifiedNotesPreview(controller: notesCtrl),
                       CheckboxListTile(
                         value: hasRecording,
                         contentPadding: EdgeInsets.zero,
@@ -360,7 +340,8 @@ Future<void> showLectureDetailEditor(
                       Align(
                         alignment: Alignment.centerRight,
                         child: FilledButton(
-                          onPressed: () => Navigator.pop(context, true),
+                          onPressed: () =>
+                              Navigator.pop(sheetContext, true),
                           child: Text(l10n.save),
                         ),
                       ),
@@ -369,7 +350,6 @@ Future<void> showLectureDetailEditor(
                 ),
               ),
             ),
-          ),
         );
   if (saved == true && context.mounted) {
     lecture.recordingLink = hasRecording ? ctrl.text.trim() : null;

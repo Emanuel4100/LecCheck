@@ -30,6 +30,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueWithGoogle => 'Continue with Google';
 
   @override
+  String get syncConflictTitle => 'Sync conflict';
+
+  @override
+  String get syncConflictBody =>
+      'This device and your Google account both have different schedule data. Which copy should we keep?';
+
+  @override
+  String get syncConflictUseDevice => 'Keep this device';
+
+  @override
+  String get syncConflictUseCloud => 'Use account data';
+
+  @override
   String get continueWithGoogleUnavailable =>
       'Google sign-in (not on this platform)';
 
@@ -200,6 +213,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get courseName => 'Course name';
 
   @override
+  String get courseColorLabel => 'Course color';
+
+  @override
+  String get pickColorTitle => 'Pick a color';
+
+  @override
+  String get moreColors => 'More colors';
+
+  @override
   String get courseCode => 'Course code';
 
   @override
@@ -255,6 +277,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoMeetingNumbers => 'Auto meeting numbers';
+
+  @override
+  String get semesterDefaultName => 'Semester';
+
+  @override
+  String get semestersSectionTitle => 'Semesters';
+
+  @override
+  String get semestersSectionSubtitle =>
+      'Switch between terms or add another schedule.';
+
+  @override
+  String get activeSemesterLabel => 'Active semester';
+
+  @override
+  String get addSemesterButton => 'Add semester';
+
+  @override
+  String get newSemesterTitle => 'New semester';
+
+  @override
+  String get semesterNameLabel => 'Semester name';
+
+  @override
+  String get deleteSemesterTitle => 'Delete semester?';
+
+  @override
+  String get deleteSemesterBody =>
+      'This removes only this semester from the list. Exported backups are unchanged.';
+
+  @override
+  String get renameSemesterTitle => 'Rename semester';
 
   @override
   String get semesterStart => 'Semester start';
@@ -327,7 +381,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get minuteUnitShort => 'm';
 
   @override
-  String get lecturesTabNeedAttention => 'Need attention';
+  String get lecturesTabNeedAttention => 'Action queue';
 
   @override
   String get lecturesTabUpcoming => 'Upcoming';
@@ -561,6 +615,80 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearNoClassDay => 'Restore normal day';
 
   @override
+  String get vacationsSectionTitle => 'Holidays & vacations';
+
+  @override
+  String get vacationsSectionSubtitle =>
+      'Mark date ranges as no-class (all sessions canceled).';
+
+  @override
+  String get addVacationRange => 'Add vacation range';
+
+  @override
+  String noClassDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count no-class days',
+      one: '1 no-class day',
+      zero: 'No no-class days',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clearAllNoClassDays => 'Clear all no-class days';
+
+  @override
+  String get clearAllNoClassDaysConfirm =>
+      'Remove every no-class mark and set those sessions back to pending?';
+
+  @override
+  String get exportDataTitle => 'Export schedule';
+
+  @override
+  String get exportDataSubtitle => 'Share a JSON backup of all semesters.';
+
+  @override
+  String get importDataTitle => 'Import schedule';
+
+  @override
+  String get importDataSubtitle =>
+      'Replace this device with a JSON backup (current data is overwritten).';
+
+  @override
+  String get importInvalidFile =>
+      'Could not read that file. Use a LecCheck export JSON.';
+
+  @override
+  String get importReplaceConfirmTitle => 'Replace all data?';
+
+  @override
+  String get importReplaceConfirmBody =>
+      'This overwrites every semester on this device with the imported file. Synced accounts will update after save.';
+
+  @override
+  String get meetingNotifTitle => 'After-class reminders';
+
+  @override
+  String get meetingNotifSubtitle =>
+      'Ask how class went a few minutes after each session ends (this device only).';
+
+  @override
+  String get meetingNotifDelayLabel => 'Minutes after end time';
+
+  @override
+  String get meetingNotifHeadsUpTitle => 'Heads-up style';
+
+  @override
+  String get meetingNotifHeadsUpSubtitle =>
+      'Higher priority banner on Android when supported.';
+
+  @override
+  String get meetingNotifUnavailablePlatform =>
+      'Meeting reminders are not available on this platform in this build.';
+
+  @override
   String get afterSemesterShort => 'After term';
 
   @override
@@ -574,4 +702,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gridZoomReset => 'Reset grid zoom';
+
+  @override
+  String get gridPinchZoomHint => 'Pinch to zoom • double-tap to reset';
 }

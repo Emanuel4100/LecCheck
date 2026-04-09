@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
@@ -13,6 +14,7 @@ bool get firebaseSupportedOnThisPlatform {
     case TargetPlatform.windows:
       return true;
     case TargetPlatform.linux:
+      return true;
     case TargetPlatform.fuchsia:
       return false;
   }
@@ -20,6 +22,10 @@ bool get firebaseSupportedOnThisPlatform {
 
 /// Whether [Firebase.initializeApp] completed for this process.
 bool get isFirebaseInitialized => Firebase.apps.isNotEmpty;
+
+/// Avoids touching [FirebaseAuth] before [Firebase.initializeApp] (e.g. widget tests).
+User? get firebaseCurrentUserIfReady =>
+    isFirebaseInitialized ? FirebaseAuth.instance.currentUser : null;
 
 /// Firestore instance; only valid after Firebase init on a supported platform.
 FirebaseFirestore get lcFirestore => FirebaseFirestore.instance;

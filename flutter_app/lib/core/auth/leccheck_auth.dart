@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../firebase_options.dart';
+import 'google_oauth_linux.dart';
 
 /// Google Play Services [ApiException] code 10 = DEVELOPER_ERROR (SHA-1 / OAuth client mismatch).
 bool isGoogleSignInAndroidDeveloperError(Object error) {
@@ -30,9 +32,9 @@ bool get googleSignInSupportedOnPlatform {
     case TargetPlatform.android:
     case TargetPlatform.iOS:
     case TargetPlatform.macOS:
+    case TargetPlatform.linux:
       return true;
     case TargetPlatform.windows:
-    case TargetPlatform.linux:
     case TargetPlatform.fuchsia:
       return false;
   }
@@ -68,6 +70,9 @@ Future<UserCredential?> signInWithGoogle() async {
     // Web: avoid google_sign_in's People API dependency (403 if API disabled).
     return FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
   }
+  if (defaultTargetPlatform == TargetPlatform.linux) {
+    return signInWithGoogleLinuxDesktop();
+  }
 
   final account = await _googleSignIn.signIn();
   if (account == null) return null;
@@ -81,10 +86,12 @@ Future<UserCredential?> signInWithGoogle() async {
 }
 
 Future<void> signOutEverywhere() async {
-  try {
-    await _googleSignIn.signOut();
-  } on Object {
-    // Ignore if GoogleSignIn was never used on this platform.
+  if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux) {
+    try {
+      await _googleSignIn.signOut();
+    } on Object {
+      // Ignore if GoogleSignIn was never used on this platform.
+    }
   }
   await FirebaseAuth.instance.signOut();
 }

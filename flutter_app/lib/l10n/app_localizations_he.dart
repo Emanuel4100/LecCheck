@@ -30,6 +30,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String get continueWithGoogle => 'המשך עם Google';
 
   @override
+  String get syncConflictTitle => 'התנגשות סנכרון';
+
+  @override
+  String get syncConflictBody =>
+      'במכשיר זה ובחשבון Google יש נתוני לוח שנה שונים. איזו עותק לשמור?';
+
+  @override
+  String get syncConflictUseDevice => 'לשמור את המכשיר';
+
+  @override
+  String get syncConflictUseCloud => 'להשתמש בנתוני החשבון';
+
+  @override
   String get continueWithGoogleUnavailable =>
       'התחברות Google (לא זמינה בפלטפורמה זו)';
 
@@ -201,6 +214,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get courseName => 'שם הקורס';
 
   @override
+  String get courseColorLabel => 'צבע הקורס';
+
+  @override
+  String get pickColorTitle => 'בחירת צבע';
+
+  @override
+  String get moreColors => 'עוד צבעים';
+
+  @override
   String get courseCode => 'קוד קורס';
 
   @override
@@ -256,6 +278,37 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get autoMeetingNumbers => 'מספור מפגשים אוטומטי';
+
+  @override
+  String get semesterDefaultName => 'סמסטר';
+
+  @override
+  String get semestersSectionTitle => 'סמסטרים';
+
+  @override
+  String get semestersSectionSubtitle => 'מעבר בין סמסטרים או הוספת לוח נוסף.';
+
+  @override
+  String get activeSemesterLabel => 'סמסטר פעיל';
+
+  @override
+  String get addSemesterButton => 'הוספת סמסטר';
+
+  @override
+  String get newSemesterTitle => 'סמסטר חדש';
+
+  @override
+  String get semesterNameLabel => 'שם הסמסטר';
+
+  @override
+  String get deleteSemesterTitle => 'למחוק סמסטר?';
+
+  @override
+  String get deleteSemesterBody =>
+      'פעולה זו מסירה רק את הסמסטר מהרשימה. גיבויים שנשמרו לא משתנים.';
+
+  @override
+  String get renameSemesterTitle => 'שינוי שם סמסטר';
 
   @override
   String get semesterStart => 'תחילת סמסטר';
@@ -327,7 +380,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get minuteUnitShort => 'ד';
 
   @override
-  String get lecturesTabNeedAttention => 'דורש טיפול';
+  String get lecturesTabNeedAttention => 'תור פעולות';
 
   @override
   String get lecturesTabUpcoming => 'קרוב';
@@ -557,6 +610,80 @@ class AppLocalizationsHe extends AppLocalizations {
   String get clearNoClassDay => 'שחזור יום רגיל';
 
   @override
+  String get vacationsSectionTitle => 'חגים וחופשות';
+
+  @override
+  String get vacationsSectionSubtitle =>
+      'סימון טווחי תאריכים כימים בלי שיעורים (ביטול כל המפגשים).';
+
+  @override
+  String get addVacationRange => 'הוספת טווח חופשה';
+
+  @override
+  String noClassDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ימים ללא שיעור',
+      one: 'יום אחד ללא שיעור',
+      zero: 'אין ימים ללא שיעור',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clearAllNoClassDays => 'ניקוי כל ימי ״ללא שיעור״';
+
+  @override
+  String get clearAllNoClassDaysConfirm =>
+      'להסיר את כל הסימונים ולהחזיר את המפגשים למצב ממתין?';
+
+  @override
+  String get exportDataTitle => 'ייצוא לוח';
+
+  @override
+  String get exportDataSubtitle => 'שיתוף קובץ JSON של כל הסמסטרים.';
+
+  @override
+  String get importDataTitle => 'ייבוא לוח';
+
+  @override
+  String get importDataSubtitle =>
+      'החלפת הנתונים במכשיר בקובץ JSON (הנתומים הנוכחיים יימחקו).';
+
+  @override
+  String get importInvalidFile =>
+      'לא ניתן לקרוא את הקובץ. יש לבחור בקובץ ייצוא של LecCheck.';
+
+  @override
+  String get importReplaceConfirmTitle => 'להחליף את כל הנתונים?';
+
+  @override
+  String get importReplaceConfirmBody =>
+      'פעולה זו מחליפה את כל הסמסטרים במכשיר בקובץ המיובא. חשבון מסונכרן יתעדכן אחרי השמירה.';
+
+  @override
+  String get meetingNotifTitle => 'תזכורות אחרי שיעור';
+
+  @override
+  String get meetingNotifSubtitle =>
+      'שאלה על מצב המפגש כמה דקות אחרי סיום (מקומי במכשיר בלבד).';
+
+  @override
+  String get meetingNotifDelayLabel => 'דקות אחרי שעת הסיום';
+
+  @override
+  String get meetingNotifHeadsUpTitle => 'התראה בולטת';
+
+  @override
+  String get meetingNotifHeadsUpSubtitle =>
+      'עדיפות גבוהה יותר באנדרואיד כשהמערכת תומכת.';
+
+  @override
+  String get meetingNotifUnavailablePlatform =>
+      'תזכורות מפגשים אינן זמינות בפלטפורמה זו בגרסה הנוכחית.';
+
+  @override
   String get afterSemesterShort => 'אחרי הסמסטר';
 
   @override
@@ -570,4 +697,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get gridZoomReset => 'איפוס זום';
+
+  @override
+  String get gridPinchZoomHint => 'צבירה לזום • הקשה כפולה לאיפוס';
 }

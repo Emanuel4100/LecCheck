@@ -15,6 +15,14 @@ class DashboardShell extends StatelessWidget {
   const DashboardShell({
     super.key,
     required this.schedule,
+    required this.scheduleRoot,
+    required this.onSwitchActiveSemester,
+    required this.onAddSemester,
+    required this.onRenameSemester,
+    required this.onDeleteSemester,
+    required this.onExportSchedule,
+    required this.onImportSchedule,
+    required this.onMeetingNotifPrefsChanged,
     required this.tab,
     required this.allLectures,
     required this.attendance,
@@ -38,6 +46,8 @@ class DashboardShell extends StatelessWidget {
     required this.onUse24HourTimeChanged,
     required this.onChangeStartDate,
     required this.onChangeEndDate,
+    required this.onAddVacationRange,
+    required this.onClearAllNoClassDays,
     required this.themeMode,
     required this.onThemeModeChanged,
     required this.onReset,
@@ -45,6 +55,14 @@ class DashboardShell extends StatelessWidget {
   });
 
   final SemesterSchedule schedule;
+  final ScheduleRootState scheduleRoot;
+  final ValueChanged<String> onSwitchActiveSemester;
+  final void Function(String name, DateTime start, DateTime end) onAddSemester;
+  final void Function(String semesterId, String newName) onRenameSemester;
+  final Future<void> Function(String semesterId) onDeleteSemester;
+  final void Function() onExportSchedule;
+  final void Function(BuildContext context) onImportSchedule;
+  final void Function() onMeetingNotifPrefsChanged;
   final DashboardTab tab;
   final List<Lecture> allLectures;
   final double attendance;
@@ -70,6 +88,8 @@ class DashboardShell extends StatelessWidget {
   final ValueChanged<bool> onUse24HourTimeChanged;
   final ValueChanged<DateTime> onChangeStartDate;
   final ValueChanged<DateTime> onChangeEndDate;
+  final void Function(DateTime start, DateTime end) onAddVacationRange;
+  final VoidCallback onClearAllNoClassDays;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final VoidCallback onReset;
@@ -193,6 +213,14 @@ class DashboardShell extends StatelessWidget {
                       ),
                       DashboardTab.settings => SettingsTab(
                         schedule: schedule,
+                        scheduleRoot: scheduleRoot,
+                        onSwitchActiveSemester: onSwitchActiveSemester,
+                        onAddSemester: onAddSemester,
+                        onRenameSemester: onRenameSemester,
+                        onDeleteSemester: onDeleteSemester,
+                        onExportSchedule: onExportSchedule,
+                        onImportSchedule: onImportSchedule,
+                        onMeetingNotifPrefsChanged: onMeetingNotifPrefsChanged,
                         onChangeLanguage: onChangeLanguage,
                         onChangeWeekStart: onChangeWeekStart,
                         onChangeVisibleDays: onChangeVisibleDays,
@@ -200,6 +228,8 @@ class DashboardShell extends StatelessWidget {
                         onUse24HourTimeChanged: onUse24HourTimeChanged,
                         onChangeStartDate: onChangeStartDate,
                         onChangeEndDate: onChangeEndDate,
+                        onAddVacationRange: onAddVacationRange,
+                        onClearAllNoClassDays: onClearAllNoClassDays,
                         themeMode: themeMode,
                         onThemeModeChanged: onThemeModeChanged,
                         onManageCourses: () => onOpenManageCourses(context),
@@ -317,126 +347,193 @@ class DashboardShell extends StatelessWidget {
     int weekday = activeDays.first;
     final wideMeeting =
         Adaptive.isDesktop(context) || Adaptive.isWebLike(context);
-    await showDialog<void>(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setLocal) => AlertDialog(
-          title: Text(l10n.addMeeting),
-          content: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: wideMeeting ? 520 : 360),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-              DropdownButtonFormField<String>(
-                initialValue: selectedCourseId,
-                decoration: InputDecoration(labelText: l10n.course),
-                items: schedule.courses
-                    .map(
-                      (course) => DropdownMenuItem(
-                        value: course.id,
-                        child: Text(course.name),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setLocal(() => selectedCourseId = v ?? ''),
-              ),
-              DropdownButtonFormField<int>(
-                initialValue: weekday,
-                items: activeDays
-                    .map(
-                      (d) => DropdownMenuItem(
-                        value: d,
-                        child: Text(weekdayLabelL10n(d, l10n)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) =>
-                    setLocal(() => weekday = v ?? activeDays.first),
-                decoration: InputDecoration(labelText: l10n.weekday),
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: type,
-                decoration: InputDecoration(labelText: l10n.type),
-                items: [
-                  DropdownMenuItem(
-                    value: l10n.lectureType,
-                    child: Text(l10n.lectureType),
+
+    void submitMeeting(BuildContext ctx) {
+      if (_toMinutes(end) <= _toMinutes(start)) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text(l10n.endAfterStartError)),
+        );
+        return;
+      }
+      final course = schedule.courses.firstWhere(
+        (c) => c.id == selectedCourseId,
+        orElse: () => schedule.courses.first,
+      );
+      onAddMeeting(
+        course,
+        Meeting(
+          weekday: weekday,
+          start: start,
+          end: end,
+          room: roomCtrl.text.trim(),
+          type: type,
+        ),
+      );
+      Navigator.pop(ctx);
+    }
+
+    Widget formFields(void Function(void Function()) setLocal) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: selectedCourseId,
+            decoration: InputDecoration(labelText: l10n.course),
+            items: schedule.courses
+                .map(
+                  (course) => DropdownMenuItem(
+                    value: course.id,
+                    child: Text(course.name),
                   ),
-                  DropdownMenuItem(
-                    value: l10n.practiceType,
-                    child: Text(l10n.practiceType),
+                )
+                .toList(),
+            onChanged: (v) => setLocal(() => selectedCourseId = v ?? ''),
+          ),
+          DropdownButtonFormField<int>(
+            initialValue: weekday,
+            items: activeDays
+                .map(
+                  (d) => DropdownMenuItem(
+                    value: d,
+                    child: Text(weekdayLabelL10n(d, l10n)),
                   ),
-                  DropdownMenuItem(value: l10n.labType, child: Text(l10n.labType)),
-                ],
-                onChanged: (v) => setLocal(() => type = v ?? l10n.lectureType),
+                )
+                .toList(),
+            onChanged: (v) =>
+                setLocal(() => weekday = v ?? activeDays.first),
+            decoration: InputDecoration(labelText: l10n.weekday),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: type,
+            decoration: InputDecoration(labelText: l10n.type),
+            items: [
+              DropdownMenuItem(
+                value: l10n.lectureType,
+                child: Text(l10n.lectureType),
               ),
-              DropdownButtonFormField<String>(
-                initialValue: start,
-                decoration: InputDecoration(labelText: l10n.startTime),
-                items: startTimes
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                    .toList(),
-                onChanged: (v) => setLocal(() {
-                  start = v ?? start;
-                  final suggestedEnd = _suggestEnd(start);
-                  if (_toMinutes(suggestedEnd) > _toMinutes(start)) {
-                    end = suggestedEnd;
-                  }
-                }),
+              DropdownMenuItem(
+                value: l10n.practiceType,
+                child: Text(l10n.practiceType),
               ),
-              DropdownButtonFormField<String>(
-                initialValue: end,
-                decoration: InputDecoration(labelText: l10n.endTime),
-                items: startTimes
-                    .where((t) => _toMinutes(t) > _toMinutes(start))
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                    .toList(),
-                onChanged: (v) => setLocal(() => end = v ?? end),
+              DropdownMenuItem(
+                value: l10n.labType,
+                child: Text(l10n.labType),
               ),
-              TextField(
-                controller: roomCtrl,
-                decoration: InputDecoration(labelText: l10n.room),
+            ],
+            onChanged: (v) => setLocal(() => type = v ?? l10n.lectureType),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: start,
+            decoration: InputDecoration(labelText: l10n.startTime),
+            items: startTimes
+                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                .toList(),
+            onChanged: (v) => setLocal(() {
+              start = v ?? start;
+              final suggestedEnd = _suggestEnd(start);
+              if (_toMinutes(suggestedEnd) > _toMinutes(start)) {
+                end = suggestedEnd;
+              }
+            }),
+          ),
+          DropdownButtonFormField<String>(
+            initialValue: end,
+            decoration: InputDecoration(labelText: l10n.endTime),
+            items: startTimes
+                .where((t) => _toMinutes(t) > _toMinutes(start))
+                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                .toList(),
+            onChanged: (v) => setLocal(() => end = v ?? end),
+          ),
+          TextField(
+            controller: roomCtrl,
+            decoration: InputDecoration(labelText: l10n.room),
+            textInputAction: TextInputAction.done,
+          ),
+        ],
+      );
+    }
+
+    try {
+      if (!wideMeeting) {
+        await showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          showDragHandle: true,
+          builder: (sheetCtx) {
+            return AnimatedPadding(
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(sheetCtx).bottom,
               ),
-                ],
+              child: StatefulBuilder(
+                builder: (context, setLocal) {
+                  final theme = Theme.of(context);
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.addMeeting,
+                          style: theme.textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 16),
+                        formFields(setLocal),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(l10n.cancel),
+                            ),
+                            const Spacer(),
+                            FilledButton(
+                              onPressed: () => submitMeeting(context),
+                              child: Text(l10n.save),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
+            );
+          },
+        );
+      } else {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogCtx) => StatefulBuilder(
+            builder: (context, setLocal) => AlertDialog(
+              title: Text(l10n.addMeeting),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: SingleChildScrollView(
+                  child: formFields(setLocal),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => submitMeeting(context),
+                  child: Text(l10n.save),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (_toMinutes(end) <= _toMinutes(start)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.endAfterStartError)),
-                  );
-                  return;
-                }
-                final course = schedule.courses.firstWhere(
-                  (c) => c.id == selectedCourseId,
-                  orElse: () => schedule.courses.first,
-                );
-                onAddMeeting(
-                  course,
-                  Meeting(
-                    weekday: weekday,
-                    start: start,
-                    end: end,
-                    room: roomCtrl.text.trim(),
-                    type: type,
-                  ),
-                );
-                Navigator.pop(context);
-              },
-              child: Text(l10n.save),
-            ),
-          ],
-        ),
-      ),
-    );
+        );
+      }
+    } finally {
+      roomCtrl.dispose();
+    }
   }
 
   static List<String> _timeOptions() {

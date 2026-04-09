@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=LecCheck
+GenericName=Lecture schedule
+Comment=Track lectures, attendance, and your semester schedule
+Exec=leccheck
+Icon=com.leccheck.app
+Terminal=false
+Categories=Education;Office;
+StartupNotify=true
+StartupWMClass=leccheck
+Keywords=lecture;schedule;school;university;calendar;

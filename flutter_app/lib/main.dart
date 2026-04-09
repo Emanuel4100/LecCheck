@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kDebugMode;
@@ -9,9 +11,11 @@ import 'app/leccheck_root.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'core/firebase/leccheck_firebase.dart';
+import 'core/notifications/meeting_notifications.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initMeetingNotifications();
   if (firebaseSupportedOnThisPlatform) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -57,29 +61,46 @@ class _LecCheckAppState extends State<LecCheckApp> {
     );
   }
 
+  static const _kAppLocale = 'app_locale';
+
   @override
   void initState() {
     super.initState();
-    _loadThemePreference();
+    unawaited(_loadUiPreferences());
   }
 
-  Future<void> _loadThemePreference() async {
+  Future<void> _loadUiPreferences() async {
     final prefs = await SharedPreferences.getInstance();
-    final key = prefs.getString('theme_mode');
     if (!mounted) return;
-    setState(() {
-      _themeMode = switch (key) {
-        'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
-      };
-    });
+    final themeKey = prefs.getString('theme_mode');
+    final nextTheme = switch (themeKey) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+    final lang = prefs.getString(_kAppLocale);
+    final nextLocale =
+        (lang == 'he' || lang == 'en') ? Locale(lang!) : _locale;
+    if (nextTheme != _themeMode || nextLocale != _locale) {
+      setState(() {
+        _themeMode = nextTheme;
+        _locale = nextLocale;
+      });
+    }
+  }
+
+  Future<void> _persistAppLocale(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kAppLocale, languageCode);
   }
 
   void _setLanguage(String languageCode) {
+    final next = Locale(languageCode);
+    if (next == _locale) return;
     setState(() {
-      _locale = Locale(languageCode);
+      _locale = next;
     });
+    unawaited(_persistAppLocale(languageCode));
   }
 
   Future<void> _setThemeMode(ThemeMode mode) async {
@@ -112,6 +133,7 @@ class _LecCheckAppState extends State<LecCheckApp> {
       ],
       supportedLocales: const [Locale('en'), Locale('he')],
       home: LecCheckRoot(
+        key: const ValueKey<String>('leccheck_root'),
         onLanguageChanged: _setLanguage,
         themeMode: _themeMode,
         onThemeModeChanged: _setThemeMode,

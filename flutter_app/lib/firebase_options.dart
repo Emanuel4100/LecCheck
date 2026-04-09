@@ -29,10 +29,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return linux;
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
@@ -78,6 +75,16 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCt1OH6NRp4dSQSPEagNGRhvtuxFtjwXyk',
+    appId: '1:214900154341:web:1e7e13e38db6ecb705190c',
+    messagingSenderId: '214900154341',
+    projectId: 'leccheck-app-db',
+    authDomain: 'leccheck-app-db.firebaseapp.com',
+    storageBucket: 'leccheck-app-db.firebasestorage.app',
+  );
+
+  /// Same project as [web]/[windows]; use for Flutter Linux desktop.
+  static const FirebaseOptions linux = FirebaseOptions(
     apiKey: 'AIzaSyCt1OH6NRp4dSQSPEagNGRhvtuxFtjwXyk',
     appId: '1:214900154341:web:1e7e13e38db6ecb705190c',
     messagingSenderId: '214900154341',

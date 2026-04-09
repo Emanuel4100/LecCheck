@@ -8,56 +8,63 @@ import 'firestore_schedule_store.dart';
 import 'local_schedule_store.dart';
 
 /// Loads and merges local + cloud schedule on cold start (or right after Google sign-in).
-Future<({SemesterSchedule? schedule, User? user})> loadInitialScheduleState({
+///
+/// [syncUserIdForTests] runs the cloud merge branches with this uid using [cloudStore]
+/// without requiring Firebase Auth (unit tests only).
+Future<({ScheduleRootState? root, User? user})> loadInitialScheduleState({
   LocalScheduleStore? localStore,
   FirestoreScheduleStore? cloudStore,
+  String? syncUserIdForTests,
 }) async {
   final local = localStore ?? LocalScheduleStore();
   final cloud = cloudStore ?? FirestoreScheduleStore();
-  final user = FirebaseAuth.instance.currentUser;
+  final authUser = firebaseCurrentUserIfReady;
+  final uid = syncUserIdForTests ?? authUser?.uid;
 
   final localRaw = await local.loadRaw();
-  final localSchedule = scheduleBundleFromJson(localRaw);
+  final localRoot = scheduleRootFromJson(localRaw);
   final localAt = scheduleBundleSavedAt(localRaw) ?? 0;
 
-  if (user != null &&
+  final cloudAllowed = uid != null &&
       FeatureFlags.enableFirebaseSync &&
-      isFirebaseInitialized) {
-    final cloudRaw = await cloud.pullRaw(user.uid);
-    final cloudSchedule = scheduleBundleFromJson(cloudRaw);
+      (syncUserIdForTests != null || isFirebaseInitialized);
+
+  if (cloudAllowed) {
+    final cloudRaw = await cloud.pullRaw(uid);
+    final cloudRoot = scheduleRootFromJson(cloudRaw);
     final cloudAt = scheduleBundleSavedAt(cloudRaw) ?? 0;
 
-    if (cloudSchedule == null && localSchedule != null) {
-      final map = scheduleBundleToJson(
-        localSchedule,
+    if (cloudRoot == null && localRoot != null) {
+      final map = scheduleRootToJson(
+        localRoot,
         savedAtMillis:
             localAt > 0 ? localAt : DateTime.now().millisecondsSinceEpoch,
       );
       await local.saveRaw(map);
-      await cloud.pushRaw(user.uid, map);
-      return (schedule: localSchedule, user: user);
+      await cloud.pushRaw(uid, map);
+      return (root: localRoot, user: authUser);
     }
-    if (cloudSchedule != null && localSchedule == null) {
+    if (cloudRoot != null && localRoot == null) {
       if (cloudRaw != null) await local.saveRaw(cloudRaw);
-      return (schedule: cloudSchedule, user: user);
+      return (root: cloudRoot, user: authUser);
     }
-    if (cloudSchedule != null && localSchedule != null) {
+    if (cloudRoot != null && localRoot != null) {
       final useLocal = localAt >= cloudAt;
       if (useLocal) {
-        final map = scheduleBundleToJson(
-          localSchedule,
+        final map = scheduleRootToJson(
+          localRoot,
           savedAtMillis: DateTime.now().millisecondsSinceEpoch,
         );
         await local.saveRaw(map);
-        await cloud.pushRaw(user.uid, map);
-        return (schedule: localSchedule, user: user);
+        await cloud.pushRaw(uid, map);
+        return (root: localRoot, user: authUser);
       } else {
         if (cloudRaw != null) await local.saveRaw(cloudRaw);
-        return (schedule: cloudSchedule, user: user);
+        return (root: cloudRoot, user: authUser);
       }
     }
-    return (schedule: null, user: user);
+    return (root: null, user: authUser);
   }
 
-  return (schedule: localSchedule, user: user);
+  return (root: localRoot, user: authUser);
 }

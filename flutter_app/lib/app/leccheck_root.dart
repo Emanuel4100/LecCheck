@@ -3,11 +3,19 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/auth/leccheck_auth.dart';
 import '../core/config/feature_flags.dart';
+import '../core/config/test_zone.dart';
 import '../core/firebase/leccheck_firebase.dart';
 import '../core/platform/adaptive.dart';
+import '../core/schedule/firestore_schedule_store.dart';
+import '../core/schedule/local_schedule_store.dart';
+import '../core/schedule/merge_prefs.dart';
+import '../core/notifications/meeting_notifications.dart';
+import '../core/schedule/schedule_backup.dart';
 import '../core/schedule/schedule_bootstrap.dart';
 import '../core/schedule/schedule_persistence.dart';
 import '../core/ui/app_icons.dart';
@@ -20,6 +28,7 @@ import '../features/dashboard/lecture_detail_sheet.dart';
 import '../l10n/app_localizations.dart';
 import '../models/schedule_models.dart';
 import '../models/schedule_lectures.dart';
+import '../models/schedule_serialization.dart';
 
 enum AppScreen { login, onboarding, addCourse, dashboard }
 
@@ -34,12 +43,18 @@ class LecCheckRoot extends StatefulWidget {
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
 
+  /// Debug / `flutter test` only: skips [loadInitialScheduleState] when set.
+  static Future<({ScheduleRootState? root, User? user})> Function()?
+      debugBootstrapOverride;
+
   @override
   State<LecCheckRoot> createState() => _LecCheckRootState();
 }
 
 class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver {
   AppScreen screen = AppScreen.login;
+  ScheduleRootState? _scheduleRoot;
+  /// Active semester; kept in sync with [_scheduleRoot].
   SemesterSchedule? schedule;
   DashboardTab tab = DashboardTab.weekly;
   int selectedDay = DateTime.now().weekday;
@@ -53,16 +68,20 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setMeetingNotificationActionHandler(_handleMeetingNotificationAction);
+    });
     unawaited(_bootstrap());
   }
 
   @override
   void dispose() {
+    setMeetingNotificationActionHandler(null);
     WidgetsBinding.instance.removeObserver(this);
-    final s = schedule;
-    if (s != null) {
+    final root = _scheduleRoot;
+    if (root != null) {
       unawaited(
-        _persistence.persistNow(s, user: FirebaseAuth.instance.currentUser),
+        _persistence.persistNow(root, user: firebaseCurrentUserIfReady),
       );
     }
     _persistence.dispose();
@@ -74,23 +93,49 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
-      final s = schedule;
-      if (s != null) {
+      final root = _scheduleRoot;
+      if (root != null) {
         unawaited(
-          _persistence.persistNow(s, user: FirebaseAuth.instance.currentUser),
+          _persistence.persistNow(root, user: firebaseCurrentUserIfReady),
         );
       }
     }
   }
 
+  Future<({ScheduleRootState? root, User? user})> _loadInitialSchedule() async {
+    final loader = kDebugMode ? LecCheckRoot.debugBootstrapOverride : null;
+    return (loader ?? loadInitialScheduleState)();
+  }
+
   Future<void> _bootstrap() async {
     try {
-      final r = await loadInitialScheduleState();
+      // Avoid reading currentUser / cloud before native auth has restored the session.
+      final inWidgetTestZone =
+          Zone.current[leccheckWidgetTestZoneKey] == true;
+      if (firebaseSupportedOnThisPlatform &&
+          isFirebaseInitialized &&
+          !inWidgetTestZone) {
+        try {
+          await FirebaseAuth.instance
+              .authStateChanges()
+              .timeout(const Duration(seconds: 5))
+              .first;
+        } on TimeoutException {
+          if (kDebugMode) {
+            debugPrint(
+              'authStateChanges().first timed out; continuing with currentUser.',
+            );
+          }
+        }
+      }
+      final r = await _loadInitialSchedule();
       if (!mounted) return;
       setState(() {
         _applyLoadedState(r);
         _bootstrapping = false;
       });
+      _scheduleSyncAppLocaleFromSchedule();
+      unawaited(rescheduleMeetingNotifications(_scheduleRoot));
     } on Object catch (e, st) {
       if (kDebugMode) {
         debugPrint('Bootstrap failed: $e\n$st');
@@ -100,32 +145,89 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     }
   }
 
-  void _applyLoadedState(({SemesterSchedule? schedule, User? user}) r) {
-    schedule = r.schedule;
+  void _applyLoadedState(({ScheduleRootState? root, User? user}) r) {
+    _scheduleRoot = r.root;
+    schedule = _scheduleRoot?.activeSchedule;
     if (schedule != null) {
       screen = schedule!.courses.isEmpty ? AppScreen.addCourse : AppScreen.dashboard;
       _invalidateLectureCache();
-    } else if (FirebaseAuth.instance.currentUser != null) {
+    } else if (firebaseCurrentUserIfReady != null) {
       screen = AppScreen.onboarding;
     } else {
       screen = AppScreen.login;
     }
   }
 
+  /// [MaterialApp] in [main.dart] defaults to English; sync from loaded semester
+  /// so cold start matches [SemesterSchedule.language] (e.g. Hebrew).
+  void _syncAppLocaleFromSchedule() {
+    final lang = schedule?.language;
+    if (lang == null || lang.isEmpty) return;
+    if (lang != 'he' && lang != 'en') return;
+    widget.onLanguageChanged(lang);
+  }
+
+  void _scheduleSyncAppLocaleFromSchedule() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncAppLocaleFromSchedule();
+    });
+  }
+
   void _persistSchedule() {
-    final s = schedule;
-    if (s == null) return;
-    _persistence.persistDebounced(s, user: FirebaseAuth.instance.currentUser);
+    final root = _scheduleRoot;
+    if (root == null) return;
+    _persistence.persistDebounced(root, user: firebaseCurrentUserIfReady);
+    unawaited(rescheduleMeetingNotifications(root));
+  }
+
+  void _handleMeetingNotificationAction(String payload, String actionId) {
+    if (!mounted) return;
+    final parts = payload.split('|');
+    if (parts.length != 4) return;
+    final courseId = parts[0];
+    final dateKey = parts[1];
+    final start = parts[2];
+    final end = parts[3];
+    final root = _scheduleRoot;
+    if (root == null) return;
+    final sch = root.activeSchedule;
+    for (final c in sch.courses) {
+      if (c.id != courseId) continue;
+      for (final l in c.lectures) {
+        if (scheduleDateKey(l.date) == dateKey &&
+            l.start == start &&
+            l.end == end) {
+          final status = switch (actionId) {
+            'attended' => LectureStatus.attended,
+            'missed' => LectureStatus.missed,
+            'skipped' => LectureStatus.skipped,
+            _ => null,
+          };
+          if (status != null) {
+            setState(() => l.status = status);
+            _persistSchedule();
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  void _refreshMeetingNotifications() {
+    unawaited(rescheduleMeetingNotifications(_scheduleRoot));
   }
 
   Future<void> _handleReset() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = firebaseCurrentUserIfReady?.uid;
     await _persistence.clearLocal();
+    await _clearPendingLocalMerge();
     if (uid != null && FeatureFlags.enableFirebaseSync) {
       await _persistence.clearCloud(uid);
     }
     if (!mounted) return;
     setState(() {
+      _scheduleRoot = null;
       schedule = null;
       screen = AppScreen.onboarding;
       _invalidateLectureCache();
@@ -135,8 +237,10 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
 
   Future<void> _handleLogout() async {
     await signOutEverywhere();
+    await _clearPendingLocalMerge();
     if (!mounted) return;
     setState(() {
+      _scheduleRoot = null;
       schedule = null;
       screen = AppScreen.login;
       _invalidateLectureCache();
@@ -144,10 +248,113 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     });
   }
 
-  Future<void> _onGoogleSignedIn() async {
-    final r = await loadInitialScheduleState();
+  Future<void> _clearPendingLocalMerge() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(kPendingLocalMergeKey, false);
+  }
+
+  Future<void> _markPendingLocalMerge() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(kPendingLocalMergeKey, true);
+  }
+
+  Future<void> _onGoogleSignedIn(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final pendingMerge = prefs.getBool(kPendingLocalMergeKey) ?? false;
+    final user = firebaseCurrentUserIfReady;
+
+    if (pendingMerge &&
+        user != null &&
+        FeatureFlags.enableFirebaseSync &&
+        isFirebaseInitialized) {
+      final local = LocalScheduleStore();
+      final cloud = FirestoreScheduleStore();
+      final localRaw = await local.loadRaw();
+      final localRoot = scheduleRootFromJson(localRaw);
+      if (localRoot != null) {
+        final map = scheduleRootToJson(
+          localRoot,
+          savedAtMillis: DateTime.now().millisecondsSinceEpoch,
+        );
+        await local.saveRaw(map);
+        await cloud.pushRaw(user.uid, map);
+        await prefs.setBool(kPendingLocalMergeKey, false);
+        if (!mounted) return;
+        setState(() => _applyLoadedState((root: localRoot, user: user)));
+        _scheduleSyncAppLocaleFromSchedule();
+        return;
+      }
+      await prefs.setBool(kPendingLocalMergeKey, false);
+    }
+
+    if (user != null &&
+        FeatureFlags.enableFirebaseSync &&
+        isFirebaseInitialized &&
+        !pendingMerge) {
+      final local = LocalScheduleStore();
+      final cloud = FirestoreScheduleStore();
+      final localRaw = await local.loadRaw();
+      final cloudRaw = await cloud.pullRaw(user.uid);
+      final localRoot = scheduleRootFromJson(localRaw);
+      final cloudRoot = scheduleRootFromJson(cloudRaw);
+      final localAt = scheduleBundleSavedAt(localRaw) ?? 0;
+      final cloudAt = scheduleBundleSavedAt(cloudRaw) ?? 0;
+      if (localRoot != null &&
+          cloudRoot != null &&
+          localAt > 0 &&
+          cloudAt > 0 &&
+          localAt != cloudAt &&
+          context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        final choice = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.syncConflictTitle),
+            content: Text(l10n.syncConflictBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'cancel'),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton.tonal(
+                onPressed: () => Navigator.pop(ctx, 'cloud'),
+                child: Text(l10n.syncConflictUseCloud),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, 'local'),
+                child: Text(l10n.syncConflictUseDevice),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+        if (choice == 'local') {
+          final map = scheduleRootToJson(
+            localRoot,
+            savedAtMillis: DateTime.now().millisecondsSinceEpoch,
+          );
+          await local.saveRaw(map);
+          await cloud.pushRaw(user.uid, map);
+          await prefs.setBool(kPendingLocalMergeKey, false);
+          setState(() => _applyLoadedState((root: localRoot, user: user)));
+          _scheduleSyncAppLocaleFromSchedule();
+          return;
+        }
+        if (choice == 'cloud') {
+          if (cloudRaw != null) await local.saveRaw(cloudRaw);
+          await prefs.setBool(kPendingLocalMergeKey, false);
+          setState(() => _applyLoadedState((root: cloudRoot, user: user)));
+          _scheduleSyncAppLocaleFromSchedule();
+          return;
+        }
+      }
+    }
+
+    final r = await _loadInitialSchedule();
     if (!mounted) return;
+    await prefs.setBool(kPendingLocalMergeKey, false);
     setState(() => _applyLoadedState(r));
+    _scheduleSyncAppLocaleFromSchedule();
   }
 
   void _invalidateLectureCache() {
@@ -186,28 +393,165 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     return attended / total;
   }
 
+  String _newSemesterId() => 'sem_${DateTime.now().microsecondsSinceEpoch}';
+
   Future<void> createSchedule(
     String lang,
     DateTime start,
     DateTime end,
     int weekStartsOn,
   ) async {
+    final sch = SemesterSchedule(
+      startDate: start,
+      endDate: end,
+      language: lang,
+      weekStartsOn: weekStartsOn,
+    );
+    final id = _newSemesterId();
+    final root = ScheduleRootState(
+      slots: [
+        SemesterSlot(
+          id: id,
+          name: 'Semester',
+          schedule: sch,
+        ),
+      ],
+      activeSemesterId: id,
+    );
     setState(() {
-      schedule = SemesterSchedule(
-        startDate: start,
-        endDate: end,
-        language: lang,
-        weekStartsOn: weekStartsOn,
-      );
+      _scheduleRoot = root;
+      schedule = sch;
       selectedDay = weekStartsOn;
       screen = AppScreen.addCourse;
       _invalidateLectureCache();
     });
     widget.onLanguageChanged(lang);
-    final s = schedule;
-    if (s != null) {
-      await _persistence.persistNow(s, user: FirebaseAuth.instance.currentUser);
+    await _persistence.persistNow(root, user: firebaseCurrentUserIfReady);
+  }
+
+  void switchActiveSemester(String semesterId) {
+    final root = _scheduleRoot;
+    if (root == null) return;
+    if (!root.slots.any((s) => s.id == semesterId)) return;
+    setState(() {
+      root.activeSemesterId = semesterId;
+      schedule = root.activeSchedule;
+      final activeDays = orderedWeekdaysForSchedule(schedule!);
+      if (!activeDays.contains(selectedDay)) {
+        selectedDay = activeDays.isEmpty ? schedule!.weekStartsOn : activeDays.first;
+      }
+      tab = DashboardTab.weekly;
+      screen = schedule!.courses.isEmpty ? AppScreen.addCourse : AppScreen.dashboard;
+      _invalidateLectureCache();
+      _weeklyWeekSyncToken++;
+    });
+    _persistSchedule();
+  }
+
+  void addSemester(String name, DateTime start, DateTime end) {
+    final root = _scheduleRoot;
+    if (root == null) return;
+    final template = schedule;
+    final lang = template?.language ?? 'en';
+    final weekStartsOn = template?.weekStartsOn ?? 1;
+    final sch = SemesterSchedule(
+      startDate: start,
+      endDate: end,
+      language: lang,
+      weekStartsOn: weekStartsOn,
+    );
+    final id = _newSemesterId();
+    final trimmed = name.trim();
+    final slot = SemesterSlot(
+      id: id,
+      name: trimmed.isEmpty ? 'Semester' : trimmed,
+      schedule: sch,
+    );
+    setState(() {
+      root.slots.add(slot);
+      root.activeSemesterId = id;
+      schedule = sch;
+      selectedDay = weekStartsOn;
+      screen = AppScreen.addCourse;
+      _invalidateLectureCache();
+      _weeklyWeekSyncToken++;
+    });
+    _persistSchedule();
+  }
+
+  void renameSemester(String semesterId, String name) {
+    final root = _scheduleRoot;
+    if (root == null) return;
+    for (final s in root.slots) {
+      if (s.id == semesterId) {
+        setState(() => s.name = name.trim());
+        _persistSchedule();
+        return;
+      }
     }
+  }
+
+  Future<void> deleteSemester(String semesterId) async {
+    final root = _scheduleRoot;
+    if (root == null || root.slots.length <= 1) return;
+    setState(() {
+      root.slots.removeWhere((s) => s.id == semesterId);
+      if (root.activeSemesterId == semesterId) {
+        root.activeSemesterId = root.slots.first.id;
+      }
+      schedule = root.activeSchedule;
+      final activeDays = orderedWeekdaysForSchedule(schedule!);
+      if (!activeDays.contains(selectedDay)) {
+        selectedDay = activeDays.isEmpty ? schedule!.weekStartsOn : activeDays.first;
+      }
+      screen = schedule!.courses.isEmpty ? AppScreen.addCourse : AppScreen.dashboard;
+      _invalidateLectureCache();
+      _weeklyWeekSyncToken++;
+    });
+    _persistSchedule();
+  }
+
+  Future<void> _exportScheduleData() async {
+    final root = _scheduleRoot;
+    if (root == null) return;
+    await exportScheduleRoot(root);
+  }
+
+  Future<void> _importScheduleData(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final imported = await pickAndParseScheduleImport(context, l10n);
+    if (imported == null || !context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.importReplaceConfirmTitle),
+        content: Text(l10n.importReplaceConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.importDataTitle),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() {
+      _scheduleRoot = imported;
+      schedule = imported.activeSchedule;
+      tab = DashboardTab.weekly;
+      final activeDays = orderedWeekdaysForSchedule(schedule!);
+      selectedDay = activeDays.contains(schedule!.weekStartsOn)
+          ? schedule!.weekStartsOn
+          : (activeDays.isEmpty ? schedule!.weekStartsOn : activeDays.first);
+      screen = schedule!.courses.isEmpty ? AppScreen.addCourse : AppScreen.dashboard;
+      _invalidateLectureCache();
+      _weeklyWeekSyncToken++;
+    });
+    await _persistence.persistNow(imported, user: firebaseCurrentUserIfReady);
   }
 
   static Meeting _cloneMeeting(Meeting m) {
@@ -420,6 +764,73 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     _persistSchedule();
   }
 
+  void _pruneNoClassDateKeys(SemesterSchedule sc) {
+    sc.noClassDateKeys.removeWhere((key) {
+      final parts = key.split('-');
+      if (parts.length != 3) return true;
+      final y = int.tryParse(parts[0]);
+      final mo = int.tryParse(parts[1]);
+      final d = int.tryParse(parts[2]);
+      if (y == null || mo == null || d == null) return true;
+      final dt = DateTime(y, mo, d);
+      return dt.isBefore(
+            DateTime(sc.startDate.year, sc.startDate.month, sc.startDate.day),
+          ) ||
+          dt.isAfter(
+            DateTime(sc.endDate.year, sc.endDate.month, sc.endDate.day),
+          );
+    });
+  }
+
+  void addVacationRange(DateTime start, DateTime end) {
+    final sc = schedule;
+    if (sc == null) return;
+    var a = DateTime(start.year, start.month, start.day);
+    var b = DateTime(end.year, end.month, end.day);
+    if (a.isAfter(b)) {
+      final t = a;
+      a = b;
+      b = t;
+    }
+    final semStart =
+        DateTime(sc.startDate.year, sc.startDate.month, sc.startDate.day);
+    final semEnd = DateTime(sc.endDate.year, sc.endDate.month, sc.endDate.day);
+    setState(() {
+      for (var d = a; !d.isAfter(b); d = d.add(const Duration(days: 1))) {
+        if (d.isBefore(semStart) || d.isAfter(semEnd)) continue;
+        final key = scheduleDateKey(d);
+        sc.noClassDateKeys.add(key);
+        for (final c in sc.courses) {
+          for (final l in c.lectures) {
+            if (scheduleDateKey(l.date) == key) {
+              l.status = LectureStatus.canceled;
+            }
+          }
+        }
+      }
+      _invalidateLectureCache();
+    });
+    _persistSchedule();
+  }
+
+  void clearAllNoClassDays() {
+    final sc = schedule;
+    if (sc == null) return;
+    setState(() {
+      final keys = sc.noClassDateKeys.toList();
+      sc.noClassDateKeys.clear();
+      for (final c in sc.courses) {
+        for (final l in c.lectures) {
+          if (keys.contains(scheduleDateKey(l.date))) {
+            l.status = LectureStatus.pending;
+          }
+        }
+      }
+      _invalidateLectureCache();
+    });
+    _persistSchedule();
+  }
+
   Future<void> openLectureDetail(BuildContext context, Lecture lecture) async {
     final sc = schedule;
     if (sc == null) return;
@@ -444,6 +855,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     if (sc == null) return;
     setState(() {
       sc.startDate = date;
+      _pruneNoClassDateKeys(sc);
       for (final c in sc.courses) {
         rebuildLecturesForCourse(c, sc);
       }
@@ -458,6 +870,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     if (sc == null) return;
     setState(() {
       sc.endDate = date;
+      _pruneNoClassDateKeys(sc);
       for (final c in sc.courses) {
         rebuildLecturesForCourse(c, sc);
       }
@@ -493,7 +906,10 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     switch (screen) {
       case AppScreen.login:
         return _LoginScreen(
-          onGuest: () => setState(() => screen = AppScreen.onboarding),
+          onGuest: () {
+            unawaited(_markPendingLocalMerge());
+            setState(() => screen = AppScreen.onboarding);
+          },
           onGoogleSignedIn: _onGoogleSignedIn,
         );
       case AppScreen.onboarding:
@@ -515,6 +931,18 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
       case AppScreen.dashboard:
         return DashboardShell(
           schedule: schedule!,
+          scheduleRoot: _scheduleRoot!,
+          onSwitchActiveSemester: switchActiveSemester,
+          onAddSemester: addSemester,
+          onRenameSemester: renameSemester,
+          onDeleteSemester: deleteSemester,
+          onExportSchedule: () {
+            unawaited(_exportScheduleData());
+          },
+          onImportSchedule: (ctx) {
+            unawaited(_importScheduleData(ctx));
+          },
+          onMeetingNotifPrefsChanged: _refreshMeetingNotifications,
           tab: tab,
           allLectures: allLectures,
           attendance: attendancePercent,
@@ -537,6 +965,8 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           onUse24HourTimeChanged: updateUse24HourTime,
           onChangeStartDate: updateStartDate,
           onChangeEndDate: updateEndDate,
+          onAddVacationRange: addVacationRange,
+          onClearAllNoClassDays: clearAllNoClassDays,
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged,
           onReset: () => unawaited(_handleReset()),
@@ -557,14 +987,31 @@ class _LoginScreen extends StatefulWidget {
   });
 
   final VoidCallback onGuest;
-  final Future<void> Function() onGoogleSignedIn;
+  final Future<void> Function(BuildContext context) onGoogleSignedIn;
 
   @override
   State<_LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<_LoginScreen> {
+class _LoginScreenState extends State<_LoginScreen>
+    with SingleTickerProviderStateMixin {
   bool _busy = false;
+  late final AnimationController _gradientCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _gradientCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _gradientCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _onGooglePressed(BuildContext context) async {
     if (!firebaseSupportedOnThisPlatform) {
@@ -580,7 +1027,7 @@ class _LoginScreenState extends State<_LoginScreen> {
       final cred = await signInWithGoogle();
       if (!context.mounted) return;
       if (cred == null) return;
-      await widget.onGoogleSignedIn();
+      await widget.onGoogleSignedIn(context);
     } on Object catch (e) {
       if (context.mounted) {
         final msg = isGoogleSignInAndroidDeveloperError(e)
@@ -610,18 +1057,31 @@ class _LoginScreenState extends State<_LoginScreen> {
     final isCompact = Adaptive.isCompactPhone(context);
 
     return Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              cs.primary.withValues(alpha: 0.12),
-              cs.surface,
-              cs.surfaceContainerLow,
-            ],
-          ),
-        ),
+      body: AnimatedBuilder(
+        animation: _gradientCtrl,
+        builder: (context, child) {
+          final t = CurvedAnimation(
+            parent: _gradientCtrl,
+            curve: Curves.easeInOut,
+          ).value;
+          final washA = Color.lerp(cs.primary, cs.tertiary, t)!;
+          final washB = Color.lerp(cs.secondary, cs.primaryContainer, 1 - t)!;
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  washA.withValues(alpha: 0.18 + 0.12 * t),
+                  cs.surface,
+                  washB.withValues(alpha: 0.1 + 0.1 * (1 - t)),
+                  cs.surfaceContainerLow,
+                ],
+              ),
+            ),
+            child: child,
+          );
+        },
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -651,12 +1111,11 @@ class _LoginScreenState extends State<_LoginScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircleAvatar(
-                              radius: isCompact ? 36 : 42,
-                              backgroundColor: cs.primaryContainer,
-                              child: const Text(
-                                '🎓',
-                                style: TextStyle(fontSize: 40),
+                            SizedBox(
+                              height: isCompact ? 72 : 88,
+                              child: SvgPicture.asset(
+                                'assets/branding/leccheck_logo.svg',
+                                fit: BoxFit.contain,
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -677,27 +1136,14 @@ class _LoginScreenState extends State<_LoginScreen> {
                               ),
                             ),
                             SizedBox(height: isCompact ? 28 : 32),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton(
-                                onPressed: _busy ? null : widget.onGuest,
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                ),
-                                child: Text(l10n.continueLocal),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            if (FeatureFlags.enableGoogleSignIn)
+                            if (FeatureFlags.enableGoogleSignIn) ...[
                               SizedBox(
                                 width: double.infinity,
-                                child: OutlinedButton.icon(
+                                child: FilledButton.icon(
                                   onPressed: _busy || !googleAvailable
                                       ? null
                                       : () => _onGooglePressed(context),
-                                  style: OutlinedButton.styleFrom(
+                                  style: FilledButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 14,
                                     ),
@@ -708,14 +1154,12 @@ class _LoginScreenState extends State<_LoginScreen> {
                                           height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            color: cs.primary,
+                                            color: cs.onPrimary,
                                           ),
                                         )
                                       : Icon(
                                           Icons.account_circle_outlined,
-                                          color: googleAvailable
-                                              ? cs.primary
-                                              : cs.onSurfaceVariant,
+                                          color: cs.onPrimary,
                                         ),
                                   label: Text(
                                     googleAvailable
@@ -723,8 +1167,9 @@ class _LoginScreenState extends State<_LoginScreen> {
                                         : l10n.continueWithGoogleUnavailable,
                                   ),
                                 ),
-                              )
-                            else
+                              ),
+                              const SizedBox(height: 12),
+                            ] else
                               SizedBox(
                                 width: double.infinity,
                                 child: OutlinedButton(
@@ -740,6 +1185,18 @@ class _LoginScreenState extends State<_LoginScreen> {
                                   child: Text(l10n.continueCloudComingSoon),
                                 ),
                               ),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: _busy ? null : widget.onGuest,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                                child: Text(l10n.continueLocal),
+                              ),
+                            ),
                           ],
                         ),
                       ),

@@ -1,8 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // App uses document id "main" only; reject arbitrary collection spam.
     match /users/{userId}/leccheck/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && docId == 'main'
+        && request.resource.data.keys().hasOnly(['bundle', 'updatedAt'])
+        && request.resource.data.bundle is map;
+
+      allow delete: if request.auth != null
+        && request.auth.uid == userId
+        && docId == 'main';
     }
   }
 }

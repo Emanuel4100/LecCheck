@@ -26,21 +26,21 @@ class SchedulePersistence {
     _debounce?.cancel();
   }
 
-  Future<void> persistNow(SemesterSchedule schedule, {User? user}) async {
+  Future<void> persistNow(ScheduleRootState root, {User? user}) async {
     _debounce?.cancel();
-    await _write(schedule, user?.uid);
+    await _write(root, user?.uid);
   }
 
-  void persistDebounced(SemesterSchedule schedule, {User? user}) {
+  void persistDebounced(ScheduleRootState root, {User? user}) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 450), () {
-      unawaited(_write(schedule, user?.uid));
+      unawaited(_write(root, user?.uid));
     });
   }
 
-  Future<void> _write(SemesterSchedule schedule, String? uid) async {
-    final map = scheduleBundleToJson(
-      schedule,
+  Future<void> _write(ScheduleRootState root, String? uid) async {
+    final map = scheduleRootToJson(
+      root,
       savedAtMillis: DateTime.now().millisecondsSinceEpoch,
     );
     await local.saveRaw(map);
