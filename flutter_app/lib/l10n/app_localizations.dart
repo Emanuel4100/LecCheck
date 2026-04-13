@@ -422,6 +422,12 @@ abstract class AppLocalizations {
   /// **'Logout'**
   String get logout;
 
+  /// No description provided for @login.
+  ///
+  /// In en, this message translates to:
+  /// **'Login'**
+  String get login;
+
   /// No description provided for @resetSemester.
   ///
   /// In en, this message translates to:
@@ -619,6 +625,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Auto meeting numbers'**
   String get autoMeetingNumbers;
+
+  /// No description provided for @recountMeetings.
+  ///
+  /// In en, this message translates to:
+  /// **'Recount'**
+  String get recountMeetings;
+
+  /// No description provided for @recountMeetingsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting numbers recounted.'**
+  String get recountMeetingsDone;
 
   /// No description provided for @semesterDefaultName.
   ///
@@ -1172,6 +1190,78 @@ abstract class AppLocalizations {
   /// **'System default'**
   String get themeModeSystem;
 
+  /// No description provided for @settingsSectionCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'Courses'**
+  String get settingsSectionCourses;
+
+  /// No description provided for @settingsSectionSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get settingsSectionSchedule;
+
+  /// No description provided for @settingsSectionAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsSectionAppearance;
+
+  /// No description provided for @settingsSectionNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsSectionNotifications;
+
+  /// No description provided for @settingsSectionData.
+  ///
+  /// In en, this message translates to:
+  /// **'Data'**
+  String get settingsSectionData;
+
+  /// No description provided for @settingsSectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsSectionAccount;
+
+  /// No description provided for @syncStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Sync'**
+  String get syncStatusLabel;
+
+  /// No description provided for @syncStatusSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Synced'**
+  String get syncStatusSynced;
+
+  /// No description provided for @syncStatusSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get syncStatusSyncing;
+
+  /// No description provided for @syncStatusNoNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection'**
+  String get syncStatusNoNetwork;
+
+  /// No description provided for @syncStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync error'**
+  String get syncStatusError;
+
+  /// No description provided for @syncStatusOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode'**
+  String get syncStatusOffline;
+
   /// No description provided for @aboutSectionTitle.
   ///
   /// In en, this message translates to:
@@ -1441,6 +1531,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notification permission denied. Enable it in system settings.'**
   String get notificationPermissionDenied;
+
+  /// No description provided for @devNoDevOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'No dev options for you!'**
+  String get devNoDevOptions;
+
+  /// No description provided for @devModeEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer mode enabled!'**
+  String get devModeEnabled;
+
+  /// No description provided for @devModeDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer mode disabled.'**
+  String get devModeDisabled;
+
+  /// No description provided for @settingsSectionDeveloper.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer'**
+  String get settingsSectionDeveloper;
+
+  /// No description provided for @devForceNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Send test notification'**
+  String get devForceNotification;
+
+  /// No description provided for @devForceNotificationSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Test notification scheduled (5 seconds).'**
+  String get devForceNotificationSent;
+
+  /// No description provided for @devShowLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'App logs'**
+  String get devShowLogs;
+
+  /// No description provided for @devSyncDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync details'**
+  String get devSyncDetails;
+
+  /// No description provided for @devClearCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear local cache'**
+  String get devClearCache;
+
+  /// No description provided for @devClearCacheConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete all local data. Are you sure?'**
+  String get devClearCacheConfirm;
+
+  /// No description provided for @devClearCacheDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Local cache cleared.'**
+  String get devClearCacheDone;
+
+  /// No description provided for @devDisableDevMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable developer mode'**
+  String get devDisableDevMode;
+
+  /// No description provided for @devRebootstrap.
+  ///
+  /// In en, this message translates to:
+  /// **'Force re-bootstrap'**
+  String get devRebootstrap;
 }
 
 class _AppLocalizationsDelegate

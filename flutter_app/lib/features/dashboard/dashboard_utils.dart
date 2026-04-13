@@ -291,16 +291,16 @@ bool _sameLecture(Lecture a, Lecture b) =>
     a.meetingId == b.meetingId;
 
 int effectiveMeetingNumber(Lecture lecture, List<Lecture> allLectures) {
+  // Group by (courseId, type) only — all time-slots of the same type share
+  // one sequential counter sorted by date (then start time for same-day).
   final sameSeries = allLectures
-      .where(
-        (l) =>
-            l.courseId == lecture.courseId &&
-            l.type == lecture.type &&
-            l.start == lecture.start &&
-            l.end == lecture.end,
-      )
+      .where((l) => l.courseId == lecture.courseId && l.type == lecture.type)
       .toList()
-    ..sort((a, b) => a.date.compareTo(b.date));
+    ..sort((a, b) {
+      final d = a.date.compareTo(b.date);
+      if (d != 0) return d;
+      return a.start.compareTo(b.start);
+    });
   var counter = 0;
   for (final item in sameSeries) {
     if (item.status != LectureStatus.canceled &&

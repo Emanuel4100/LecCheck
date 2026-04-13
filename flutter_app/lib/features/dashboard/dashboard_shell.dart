@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import '../../core/platform/adaptive.dart';
+import '../../core/schedule/schedule_persistence.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/motion_tokens.dart';
 import '../../l10n/app_localizations.dart';
@@ -43,6 +45,7 @@ class DashboardShell extends StatelessWidget {
     required this.onChangeWeekStart,
     required this.onChangeVisibleDays,
     required this.onToggleMeetingNumbers,
+    required this.onRecountMeetings,
     required this.onUse24HourTimeChanged,
     required this.onChangeStartDate,
     required this.onChangeEndDate,
@@ -52,6 +55,11 @@ class DashboardShell extends StatelessWidget {
     required this.onThemeModeChanged,
     required this.onReset,
     required this.onLogout,
+    required this.onLogin,
+    required this.isSignedIn,
+    required this.syncStatus,
+    required this.onClearCache,
+    required this.onRebootstrap,
   });
 
   final SemesterSchedule schedule;
@@ -85,6 +93,7 @@ class DashboardShell extends StatelessWidget {
   final ValueChanged<int> onChangeWeekStart;
   final ValueChanged<Set<int>> onChangeVisibleDays;
   final ValueChanged<bool> onToggleMeetingNumbers;
+  final VoidCallback onRecountMeetings;
   final ValueChanged<bool> onUse24HourTimeChanged;
   final ValueChanged<DateTime> onChangeStartDate;
   final ValueChanged<DateTime> onChangeEndDate;
@@ -94,6 +103,11 @@ class DashboardShell extends StatelessWidget {
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final VoidCallback onReset;
   final VoidCallback onLogout;
+  final VoidCallback onLogin;
+  final bool isSignedIn;
+  final ValueListenable<SyncStatus> syncStatus;
+  final VoidCallback onClearCache;
+  final VoidCallback onRebootstrap;
 
   @override
   Widget build(BuildContext context) {
@@ -224,6 +238,7 @@ class DashboardShell extends StatelessWidget {
                         onChangeWeekStart: onChangeWeekStart,
                         onChangeVisibleDays: onChangeVisibleDays,
                         onToggleMeetingNumbers: onToggleMeetingNumbers,
+                        onRecountMeetings: onRecountMeetings,
                         onUse24HourTimeChanged: onUse24HourTimeChanged,
                         onChangeStartDate: onChangeStartDate,
                         onChangeEndDate: onChangeEndDate,
@@ -234,6 +249,11 @@ class DashboardShell extends StatelessWidget {
                         onManageCourses: () => onOpenManageCourses(context),
                         onReset: onReset,
                         onLogout: onLogout,
+                        onLogin: onLogin,
+                        isSignedIn: isSignedIn,
+                        syncStatus: syncStatus,
+                        onClearCache: onClearCache,
+                        onRebootstrap: onRebootstrap,
                         l10n: l10n,
                       ),
                     },

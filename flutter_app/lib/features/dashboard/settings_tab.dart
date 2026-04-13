@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show ValueListenable, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,12 +8,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/about_info.dart';
 import '../../core/notifications/meeting_notifications.dart';
 import '../../core/platform/adaptive.dart';
+import '../../core/schedule/schedule_persistence.dart';
+import 'dev_settings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
 import 'dashboard_utils.dart';
 
-class SettingsTab extends StatelessWidget {
+class SettingsTab extends StatefulWidget {
   const SettingsTab({
     super.key,
     required this.schedule,
@@ -28,6 +30,7 @@ class SettingsTab extends StatelessWidget {
     required this.onChangeLanguage,
     required this.onChangeVisibleDays,
     required this.onToggleMeetingNumbers,
+    required this.onRecountMeetings,
     required this.onUse24HourTimeChanged,
     required this.onChangeWeekStart,
     required this.onChangeStartDate,
@@ -39,6 +42,11 @@ class SettingsTab extends StatelessWidget {
     required this.onManageCourses,
     required this.onReset,
     required this.onLogout,
+    required this.onLogin,
+    required this.isSignedIn,
+    required this.syncStatus,
+    required this.onClearCache,
+    required this.onRebootstrap,
     required this.l10n,
   });
 
@@ -54,6 +62,7 @@ class SettingsTab extends StatelessWidget {
   final ValueChanged<String> onChangeLanguage;
   final ValueChanged<Set<int>> onChangeVisibleDays;
   final ValueChanged<bool> onToggleMeetingNumbers;
+  final VoidCallback onRecountMeetings;
   final ValueChanged<bool> onUse24HourTimeChanged;
   final ValueChanged<int> onChangeWeekStart;
   final ValueChanged<DateTime> onChangeStartDate;
@@ -65,398 +74,565 @@ class SettingsTab extends StatelessWidget {
   final VoidCallback onManageCourses;
   final VoidCallback onReset;
   final VoidCallback onLogout;
+  final VoidCallback onLogin;
+  final bool isSignedIn;
+  final ValueListenable<SyncStatus> syncStatus;
+  final VoidCallback onClearCache;
+  final VoidCallback onRebootstrap;
   final AppLocalizations l10n;
+
+  @override
+  State<SettingsTab> createState() => _SettingsTabState();
+}
+
+class _SettingsTabState extends State<SettingsTab> {
+  int _aboutTapCount = 0;
+  bool _devMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDevMode();
+  }
+
+  Future<void> _loadDevMode() async {
+    final enabled = await isDevModeEnabled();
+    if (mounted && enabled != _devMode) setState(() => _devMode = enabled);
+  }
+
+  void _onAboutTap(BuildContext context) {
+    _aboutTapCount++;
+    final l10n = widget.l10n;
+    if (_aboutTapCount == 20) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.devNoDevOptions)),
+      );
+    } else if (_aboutTapCount == 30) {
+      setDevModeEnabled(true);
+      setState(() => _devMode = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.devModeEnabled)),
+      );
+    }
+  }
+
+  // Convenience accessors to avoid `widget.` everywhere.
+  SemesterSchedule get schedule => widget.schedule;
+  ScheduleRootState get scheduleRoot => widget.scheduleRoot;
+  AppLocalizations get l10n => widget.l10n;
+  ValueChanged<String> get onSwitchActiveSemester => widget.onSwitchActiveSemester;
+  void Function(String, DateTime, DateTime) get onAddSemester => widget.onAddSemester;
+  void Function(String, String) get onRenameSemester => widget.onRenameSemester;
+  Future<void> Function(String) get onDeleteSemester => widget.onDeleteSemester;
+  VoidCallback get onExportSchedule => widget.onExportSchedule;
+  void Function(BuildContext) get onImportSchedule => widget.onImportSchedule;
+  VoidCallback get onMeetingNotifPrefsChanged => widget.onMeetingNotifPrefsChanged;
+  ValueChanged<String> get onChangeLanguage => widget.onChangeLanguage;
+  ValueChanged<Set<int>> get onChangeVisibleDays => widget.onChangeVisibleDays;
+  ValueChanged<bool> get onToggleMeetingNumbers => widget.onToggleMeetingNumbers;
+  VoidCallback get onRecountMeetings => widget.onRecountMeetings;
+  ValueChanged<bool> get onUse24HourTimeChanged => widget.onUse24HourTimeChanged;
+  ValueChanged<int> get onChangeWeekStart => widget.onChangeWeekStart;
+  ValueChanged<DateTime> get onChangeStartDate => widget.onChangeStartDate;
+  ValueChanged<DateTime> get onChangeEndDate => widget.onChangeEndDate;
+  void Function(DateTime, DateTime) get onAddVacationRange => widget.onAddVacationRange;
+  VoidCallback get onClearAllNoClassDays => widget.onClearAllNoClassDays;
+  ThemeMode get themeMode => widget.themeMode;
+  ValueChanged<ThemeMode> get onThemeModeChanged => widget.onThemeModeChanged;
+  VoidCallback get onManageCourses => widget.onManageCourses;
+  VoidCallback get onReset => widget.onReset;
+  VoidCallback get onLogout => widget.onLogout;
+  VoidCallback get onLogin => widget.onLogin;
+  bool get isSignedIn => widget.isSignedIn;
+  ValueListenable<SyncStatus> get syncStatus => widget.syncStatus;
 
   @override
   Widget build(BuildContext context) {
     final orderedStartDays = orderedWeekdaysFromStart(schedule.weekStartsOn);
+    final theme = Theme.of(context);
+
+    Widget sectionHeader(String title) => Padding(
+          padding: const EdgeInsets.fromLTRB(4, 20, 4, 6),
+          child: Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: Adaptive.isDesktop(context) ? 720 : double.infinity,
         ),
         child: ListView(
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.semestersSectionTitle,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.semestersSectionSubtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                ...scheduleRoot.slots.map((s) {
-                  final active = s.id == scheduleRoot.activeSemesterId;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      active ? Icons.check_circle : Icons.calendar_month_outlined,
-                      color: active
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                    title: Text(s.name),
-                    subtitle: Text(
-                      '${s.schedule.startDate.toString().split(' ').first} – ${s.schedule.endDate.toString().split(' ').first}',
-                    ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          children: [
+            // ── Cloud Sync ──
+            ValueListenableBuilder<SyncStatus>(
+              valueListenable: syncStatus,
+              builder: (context, status, _) {
+                final (Color color, IconData icon, String label) = switch (status) {
+                  SyncStatus.synced    => (Colors.green,        Icons.cloud_done,         l10n.syncStatusSynced),
+                  SyncStatus.syncing   => (Colors.blue,         Icons.cloud_upload,        l10n.syncStatusSyncing),
+                  SyncStatus.noNetwork => (Colors.orange,       Icons.cloud_off,           l10n.syncStatusNoNetwork),
+                  SyncStatus.error     => (Colors.red,          Icons.error_outline,       l10n.syncStatusError),
+                  SyncStatus.offline   => (Colors.grey,         Icons.cloud_off_outlined,  l10n.syncStatusOffline),
+                };
+                return Card(
+                  child: ListTile(
+                    leading: Icon(icon, color: color),
+                    title: Text(l10n.syncStatusLabel),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(
-                          tooltip: l10n.renameSemesterTitle,
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          onPressed: () => _showRenameSemesterDialog(
-                            context,
-                            s.id,
-                            s.name,
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
                           ),
                         ),
-                        if (scheduleRoot.slots.length > 1)
-                          IconButton(
-                            tooltip: l10n.deleteSemesterTitle,
-                            icon: Icon(
-                              Icons.delete_outline,
-                              size: 20,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                            onPressed: () => _confirmDeleteSemester(context, s.id),
-                          ),
+                        const SizedBox(width: 8),
+                        Text(label, style: TextStyle(color: color)),
                       ],
                     ),
-                    onTap: () {
-                      if (!active) onSwitchActiveSemester(s.id);
-                    },
-                  );
-                }),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: FilledButton.tonalIcon(
-                    onPressed: () => _showAddSemesterDialog(context),
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.addSemesterButton),
                   ),
-                ),
-              ],
+                );
+              },
             ),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.library_books_outlined),
-            title: Text(l10n.manageCourses),
-            subtitle: Text(l10n.manageCoursesSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: onManageCourses,
-          ),
-        ),
-        Card(
-          child: SwitchListTile(
-            secondary: const Icon(Icons.schedule),
-            title: Text(l10n.use24HourTimeTitle),
-            subtitle: Text(l10n.use24HourTimeSubtitle),
-            value: schedule.use24HourTime,
-            onChanged: onUse24HourTimeChanged,
-          ),
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.themeModeLabel,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<ThemeMode>(
-                  segments: [
-                    ButtonSegment(
-                      value: ThemeMode.light,
-                      label: Text(l10n.themeModeLight),
+
+            // ── Semesters ──
+            sectionHeader(l10n.semestersSectionTitle),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.semestersSectionSubtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                    ButtonSegment(
-                      value: ThemeMode.dark,
-                      label: Text(l10n.themeModeDark),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.system,
-                      label: Text(l10n.themeModeSystem),
+                    const SizedBox(height: 12),
+                    ...scheduleRoot.slots.map((s) {
+                      final active = s.id == scheduleRoot.activeSemesterId;
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          active ? Icons.check_circle : Icons.calendar_month_outlined,
+                          color: active ? theme.colorScheme.primary : null,
+                        ),
+                        title: Text(s.name),
+                        subtitle: Text(
+                          '${s.schedule.startDate.toString().split(' ').first} – ${s.schedule.endDate.toString().split(' ').first}',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: l10n.renameSemesterTitle,
+                              icon: const Icon(Icons.edit_outlined, size: 20),
+                              onPressed: () => _showRenameSemesterDialog(
+                                context,
+                                s.id,
+                                s.name,
+                              ),
+                            ),
+                            if (scheduleRoot.slots.length > 1)
+                              IconButton(
+                                tooltip: l10n.deleteSemesterTitle,
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                  color: theme.colorScheme.error,
+                                ),
+                                onPressed: () => _confirmDeleteSemester(context, s.id),
+                              ),
+                          ],
+                        ),
+                        onTap: () {
+                          if (!active) onSwitchActiveSemester(s.id);
+                        },
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => _showAddSemesterDialog(context),
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.addSemesterButton),
+                      ),
                     ),
                   ],
-                  selected: {themeMode},
-                  onSelectionChanged: (s) {
-                    if (s.isNotEmpty) onThemeModeChanged(s.first);
+                ),
+              ),
+            ),
+
+            // ── Courses ──
+            sectionHeader(l10n.settingsSectionCourses),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.library_books_outlined),
+                title: Text(l10n.manageCourses),
+                subtitle: Text(l10n.manageCoursesSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: onManageCourses,
+              ),
+            ),
+            Card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    value: schedule.enableMeetingNumbers,
+                    onChanged: onToggleMeetingNumbers,
+                    secondary: const Icon(AppIcons.numbering),
+                    title: Text(l10n.autoMeetingNumbers),
+                  ),
+                  if (schedule.enableMeetingNumbers)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 56, right: 16, bottom: 12),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            onRecountMeetings();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.recountMeetingsDone)),
+                            );
+                          },
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: Text(l10n.recountMeetings),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // ── Schedule ──
+            sectionHeader(l10n.settingsSectionSchedule),
+            Card(
+              child: ListTile(
+                leading: const Icon(AppIcons.semester),
+                title: Text(l10n.semesterStart),
+                subtitle: Text('${schedule.startDate.toLocal()}'.split(' ')[0]),
+                trailing: OutlinedButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: schedule.startDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) onChangeStartDate(picked);
+                  },
+                  child: Text(l10n.change),
+                ),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: const Icon(AppIcons.semester),
+                title: Text(l10n.semesterEnd),
+                subtitle: Text('${schedule.endDate.toLocal()}'.split(' ')[0]),
+                trailing: OutlinedButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: schedule.endDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2035),
+                    );
+                    if (picked != null) onChangeEndDate(picked);
+                  },
+                  child: Text(l10n.change),
+                ),
+              ),
+            ),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: DropdownButtonFormField<int>(
+                  initialValue: schedule.weekStartsOn,
+                  decoration: InputDecoration(
+                    labelText: l10n.weekStartsOn,
+                    prefixIcon: const Icon(AppIcons.weekday),
+                  ),
+                  items: orderedStartDays
+                      .map(
+                        (day) => DropdownMenuItem<int>(
+                          value: day,
+                          child: Text(weekdayLabelL10n(day, l10n)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) onChangeWeekStart(v);
                   },
                 ),
-              ],
-            ),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(AppIcons.language),
-            title: Text(l10n.language),
-            subtitle: DropdownButtonFormField<String>(
-              initialValue: schedule.language,
-              items: const [
-                DropdownMenuItem(value: 'he', child: Text('עברית')),
-                DropdownMenuItem(value: 'en', child: Text('English')),
-              ],
-              onChanged: (v) {
-                if (v != null) onChangeLanguage(v);
-              },
-            ),
-          ),
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: DropdownButtonFormField<int>(
-              initialValue: schedule.weekStartsOn,
-              decoration: InputDecoration(
-                labelText: l10n.weekStartsOn,
-                prefixIcon: const Icon(AppIcons.weekday),
               ),
-              items: orderedStartDays
-                  .map(
-                    (day) => DropdownMenuItem<int>(
-                      value: day,
-                      child: Text(weekdayLabelL10n(day, l10n)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) onChangeWeekStart(v);
-              },
             ),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(AppIcons.weekday),
-            title: Text(l10n.shownDays),
-            subtitle: Text(
-              orderedStartDays
-                  .where((d) => schedule.visibleWeekdays.contains(d))
-                  .map((d) => weekdayLabelL10n(d, l10n))
-                  .join(', '),
-            ),
-            trailing: OutlinedButton(
-              onPressed: () => _showVisibleDaysPopup(context, orderedStartDays),
-              child: Text(l10n.change),
-            ),
-          ),
-        ),
-        Card(
-          child: SwitchListTile(
-            value: schedule.enableMeetingNumbers,
-            onChanged: onToggleMeetingNumbers,
-            secondary: const Icon(AppIcons.numbering),
-            title: Text(l10n.autoMeetingNumbers),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(AppIcons.semester),
-            title: Text(l10n.semesterStart),
-            subtitle: Text('${schedule.startDate.toLocal()}'.split(' ')[0]),
-            trailing: OutlinedButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: schedule.startDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2035),
-                );
-                if (picked != null) onChangeStartDate(picked);
-              },
-              child: Text(l10n.change),
-            ),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(AppIcons.semester),
-            title: Text(l10n.semesterEnd),
-            subtitle: Text('${schedule.endDate.toLocal()}'.split(' ')[0]),
-            trailing: OutlinedButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: schedule.endDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2035),
-                );
-                if (picked != null) onChangeEndDate(picked);
-              },
-              child: Text(l10n.change),
-            ),
-          ),
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.vacationsSectionTitle,
-                  style: Theme.of(context).textTheme.titleSmall,
+            Card(
+              child: ListTile(
+                leading: const Icon(AppIcons.weekday),
+                title: Text(l10n.shownDays),
+                subtitle: Text(
+                  orderedStartDays
+                      .where((d) => schedule.visibleWeekdays.contains(d))
+                      .map((d) => weekdayLabelL10n(d, l10n))
+                      .join(', '),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.vacationsSectionSubtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                trailing: OutlinedButton(
+                  onPressed: () => _showVisibleDaysPopup(context, orderedStartDays),
+                  child: Text(l10n.change),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.noClassDaysCount(schedule.noClassDateKeys.length),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.tonalIcon(
-                      onPressed: () => _pickVacationRange(context),
-                      icon: const Icon(Icons.date_range_outlined),
-                      label: Text(l10n.addVacationRange),
-                    ),
-                    OutlinedButton(
-                      onPressed: schedule.noClassDateKeys.isEmpty
-                          ? null
-                          : () => _confirmClearAllNoClass(context),
-                      child: Text(l10n.clearAllNoClassDays),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (meetingNotificationsSupportedOnPlatform)
-          Card(
-            child: _MeetingNotificationSettings(
-              l10n: l10n,
-              onPrefsChanged: onMeetingNotifPrefsChanged,
-            ),
-          )
-        else
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.notifications_off_outlined),
-              title: Text(l10n.meetingNotifTitle),
-              subtitle: Text(l10n.meetingNotifUnavailablePlatform),
-            ),
-          ),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.upload_file_outlined),
-                title: Text(l10n.exportDataTitle),
-                subtitle: Text(l10n.exportDataSubtitle),
-                onTap: () => onExportSchedule(),
               ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.download_outlined),
-                title: Text(l10n.importDataTitle),
-                subtitle: Text(l10n.importDataSubtitle),
-                onTap: () => onImportSchedule(context),
-              ),
-            ],
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(AppIcons.reset),
-            title: Text(l10n.resetSemester),
-            trailing: OutlinedButton(onPressed: onReset, child: Text(l10n.reset)),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            leading: const Icon(AppIcons.logout),
-            title: Text(l10n.logout),
-            trailing: OutlinedButton(
-              onPressed: onLogout,
-              child: Text(l10n.logout),
             ),
-          ),
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.aboutSectionTitle,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Row(
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${l10n.developerLabel}: '),
-                    Expanded(child: Text(AboutInfo.developerName)),
+                    Text(
+                      l10n.vacationsSectionTitle,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.vacationsSectionSubtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.noClassDaysCount(schedule.noClassDateKeys.length),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.tonalIcon(
+                          onPressed: () => _pickVacationRange(context),
+                          icon: const Icon(Icons.date_range_outlined),
+                          label: Text(l10n.addVacationRange),
+                        ),
+                        OutlinedButton(
+                          onPressed: schedule.noClassDateKeys.isEmpty
+                              ? null
+                              : () => _confirmClearAllNoClass(context),
+                          child: Text(l10n.clearAllNoClassDays),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    final ok = await launchUrl(
-                      AboutInfo.githubUri,
-                      mode: LaunchMode.externalApplication,
-                    );
-                    if (!ok && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.openLinkFailed)),
-                      );
-                    }
-                  },
-                  child: Text(
-                    AboutInfo.githubUri.toString(),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FutureBuilder<PackageInfo>(
-                  future: PackageInfo.fromPlatform(),
-                  builder: (context, snap) {
-                    if (!snap.hasData) {
-                      return Text(l10n.versionLabel);
-                    }
-                    final p = snap.data!;
-                    return Text(
-                      '${l10n.versionLabel}: v${p.version} (${p.buildNumber})',
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
+
+            // ── Appearance ──
+            sectionHeader(l10n.settingsSectionAppearance),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.themeModeLabel,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<ThemeMode>(
+                      segments: [
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text(l10n.themeModeLight),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text(l10n.themeModeDark),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text(l10n.themeModeSystem),
+                        ),
+                      ],
+                      selected: {themeMode},
+                      onSelectionChanged: (s) {
+                        if (s.isNotEmpty) onThemeModeChanged(s.first);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: const Icon(AppIcons.language),
+                title: Text(l10n.language),
+                subtitle: DropdownButtonFormField<String>(
+                  initialValue: schedule.language,
+                  items: const [
+                    DropdownMenuItem(value: 'he', child: Text('עברית')),
+                    DropdownMenuItem(value: 'en', child: Text('English')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) onChangeLanguage(v);
+                  },
+                ),
+              ),
+            ),
+            Card(
+              child: SwitchListTile(
+                secondary: const Icon(Icons.schedule),
+                title: Text(l10n.use24HourTimeTitle),
+                subtitle: Text(l10n.use24HourTimeSubtitle),
+                value: schedule.use24HourTime,
+                onChanged: onUse24HourTimeChanged,
+              ),
+            ),
+
+            // ── Notifications ──
+            sectionHeader(l10n.settingsSectionNotifications),
+            if (meetingNotificationsSupportedOnPlatform)
+              Card(
+                child: _MeetingNotificationSettings(
+                  l10n: l10n,
+                  onPrefsChanged: onMeetingNotifPrefsChanged,
+                ),
+              )
+            else
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.notifications_off_outlined),
+                  title: Text(l10n.meetingNotifTitle),
+                  subtitle: Text(l10n.meetingNotifUnavailablePlatform),
+                ),
+              ),
+
+            // ── Data ──
+            sectionHeader(l10n.settingsSectionData),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.upload_file_outlined),
+                    title: Text(l10n.exportDataTitle),
+                    subtitle: Text(l10n.exportDataSubtitle),
+                    onTap: () => onExportSchedule(),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.download_outlined),
+                    title: Text(l10n.importDataTitle),
+                    subtitle: Text(l10n.importDataSubtitle),
+                    onTap: () => onImportSchedule(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Account ──
+            sectionHeader(l10n.settingsSectionAccount),
+            Card(
+              child: ListTile(
+                leading: Icon(isSignedIn ? AppIcons.logout : Icons.login),
+                title: Text(isSignedIn ? l10n.logout : l10n.login),
+                trailing: OutlinedButton(
+                  onPressed: isSignedIn ? onLogout : onLogin,
+                  child: Text(isSignedIn ? l10n.logout : l10n.login),
+                ),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: const Icon(AppIcons.reset),
+                title: Text(l10n.resetSemester),
+                trailing: OutlinedButton(onPressed: onReset, child: Text(l10n.reset)),
+              ),
+            ),
+
+            // ── Developer (easter egg) ──
+            if (_devMode) ...[
+              sectionHeader(l10n.settingsSectionDeveloper),
+              DevSettingsSection(
+                l10n: l10n,
+                syncStatus: syncStatus,
+                onClearCache: widget.onClearCache,
+                onRebootstrap: widget.onRebootstrap,
+                onDevModeDisabled: () => setState(() => _devMode = false),
+              ),
+            ],
+
+            // ── About ──
+            GestureDetector(
+              onTap: () => _onAboutTap(context),
+              child: sectionHeader(l10n.aboutSectionTitle),
+            ),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${l10n.developerLabel}: '),
+                        Expanded(child: Text(AboutInfo.developerName)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final ok = await launchUrl(
+                          AboutInfo.githubUri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                        if (!ok && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.openLinkFailed)),
+                          );
+                        }
+                      },
+                      child: Text(
+                        AboutInfo.githubUri.toString(),
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FutureBuilder<PackageInfo>(
+                      future: PackageInfo.fromPlatform(),
+                      builder: (context, snap) {
+                        if (!snap.hasData) {
+                          return Text(l10n.versionLabel);
+                        }
+                        final p = snap.data!;
+                        return Text(
+                          '${l10n.versionLabel}: v${p.version} (${p.buildNumber})',
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
-      ],
-    ),
       ),
     );
   }
@@ -732,7 +908,7 @@ class _MeetingNotificationSettingsState
 
   Future<void> _applyEnabled(bool v) async {
     if (v && defaultTargetPlatform == TargetPlatform.android) {
-      final granted = await requestAndroidNotificationPermission();
+      final granted = await ensureAndroidNotificationSchedulingReady();
       if (!mounted) return;
       if (!granted) {
         ScaffoldMessenger.of(context).showSnackBar(

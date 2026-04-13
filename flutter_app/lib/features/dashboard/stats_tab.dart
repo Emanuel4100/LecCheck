@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../core/platform/adaptive.dart';
@@ -316,7 +318,7 @@ class StatsTab extends StatelessWidget {
         Text(l10n.statsPerCourseTitle, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         SizedBox(
-          height: 220,
+          height: 300,
           child: Card(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
@@ -538,26 +540,42 @@ class _CourseBarChart extends StatelessWidget {
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
         maxY: maxY * 1.15,
-        barTouchData: BarTouchData(enabled: true),
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipItem: (group, groupIdx, rod, rodIdx) {
+              final i = group.x;
+              if (i < 0 || i >= courses.length) return null;
+              final c = courses[i];
+              return BarTooltipItem(
+                '${c.name}\n${l10n.statsBarLegendAttended}: ${c.attended}  ${l10n.statsBarLegendMissed}: ${c.missed}',
+                const TextStyle(fontSize: 11, color: Colors.white),
+              );
+            },
+          ),
+        ),
         titlesData: FlTitlesData(
           show: true,
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 28,
+              reservedSize: 64,
               getTitlesWidget: (value, meta) {
                 final i = value.toInt();
                 if (i < 0 || i >= courses.length) return const SizedBox();
                 final name = courses[i].name;
-                final short =
-                    name.length > 6 ? '${name.substring(0, 6)}…' : name;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    short,
-                    style: const TextStyle(fontSize: 10),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  angle: -45 * math.pi / 180,
+                  child: SizedBox(
+                    width: 56,
+                    child: Text(
+                      name,
+                      style: const TextStyle(fontSize: 9),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 );
               },

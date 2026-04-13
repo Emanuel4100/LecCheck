@@ -39,7 +39,10 @@ class LecturesTab extends StatefulWidget {
 }
 
 class _LecturesTabState extends State<LecturesTab>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   late TabController _tabController;
   final FocusNode _searchFocus = FocusNode();
   final TextEditingController _searchCtrl = TextEditingController();
@@ -93,24 +96,39 @@ class _LecturesTabState extends State<LecturesTab>
   }
 
   List<Lecture> _upcoming() {
-    final range = upcomingWeeksRange(
-      DateTime.now(),
-      widget.schedule.weekStartsOn,
-      includeWeekAfter: _includeWeekAfter,
-    );
-    final list = widget.data
-        .where(
-          (l) => lectureStartInRange(
-            l,
-            range.startInclusive,
-            range.endExclusive,
-          ),
-        )
+    final now = DateTime.now();
+    final weekEnd = weekStartForDate(now, widget.schedule.weekStartsOn)
+        .add(const Duration(days: 7));
+
+    // This week's remaining lectures (from now until end of week)
+    var list = widget.data
+        .where((l) {
+          final s = lectureStartDateTime(l);
+          return !s.isBefore(now) && s.isBefore(weekEnd);
+        })
         .toList()
-      ..sort(
-        (a, b) =>
-            lectureStartDateTime(a).compareTo(lectureStartDateTime(b)),
+      ..sort((a, b) =>
+          lectureStartDateTime(a).compareTo(lectureStartDateTime(b)));
+
+    // Fall back to next week if nothing left this week
+    if (list.isEmpty) {
+      final range = upcomingWeeksRange(
+        now,
+        widget.schedule.weekStartsOn,
+        includeWeekAfter: _includeWeekAfter,
       );
+      list = widget.data
+          .where(
+            (l) => lectureStartInRange(
+              l,
+              range.startInclusive,
+              range.endExclusive,
+            ),
+          )
+          .toList()
+        ..sort((a, b) =>
+            lectureStartDateTime(a).compareTo(lectureStartDateTime(b)));
+    }
     return list;
   }
 
@@ -153,6 +171,7 @@ class _LecturesTabState extends State<LecturesTab>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final l10n = widget.l10n;
     final overdue = _overduePending();
     final upcoming = _upcoming();

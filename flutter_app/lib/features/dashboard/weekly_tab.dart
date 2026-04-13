@@ -38,10 +38,14 @@ class WeeklyTab extends StatefulWidget {
   State<WeeklyTab> createState() => _WeeklyTabState();
 }
 
-class _WeeklyTabState extends State<WeeklyTab> {
+class _WeeklyTabState extends State<WeeklyTab>
+    with AutomaticKeepAliveClientMixin {
   late DateTime _currentWeekStart;
   double _gridScale = 1.0;
   double _pinchBaseScale = 1.0;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -61,6 +65,7 @@ class _WeeklyTabState extends State<WeeklyTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final activeDays = orderedWeekdaysForSchedule(widget.schedule);
     final usePinchZoom =
         !Adaptive.isDesktop(context) && !Adaptive.isTablet(context);
@@ -374,109 +379,77 @@ class _WeeklyTabState extends State<WeeklyTab> {
                                                 BorderRadius.circular(8),
                                           ),
                                           clipBehavior: Clip.hardEdge,
-                                          child: LayoutBuilder(
-                                            builder: (context, constraints) {
-                                              return FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                alignment: Alignment.topLeft,
-                                                child: ConstrainedBox(
-                                                  constraints: BoxConstraints(
-                                                    maxWidth:
-                                                        constraints.maxWidth,
-                                                  ),
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      if (!titleOnlyTile)
-                                                        Container(
-                                                          width: double.infinity,
-                                                          height: 4,
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: statusColor(
-                                                                lecture
-                                                                    .status),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        3),
-                                                          ),
-                                                        ),
-                                                      if (!titleOnlyTile)
-                                                        SizedBox(
-                                                            height: compactTile
-                                                                ? 2
-                                                                : 4),
-                                                      FittedBox(
-                                                        fit: BoxFit.scaleDown,
-                                                        alignment:
-                                                            Alignment.topLeft,
-                                                        child: Text(
-                                                          localizeCourseName(
-                                                            lecture.courseName,
-                                                            widget.l10n,
-                                                          ),
-                                                          maxLines:
-                                                              titleOnlyTile
-                                                                  ? 1
-                                                                  : 2,
-                                                          softWrap: true,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          style: TextStyle(
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            fontSize:
-                                                                titleOnlyTile
-                                                                    ? 10
-                                                                    : (compactTile
-                                                                        ? 9
-                                                                        : 11),
-                                                            height: 1.1,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      if (!titleOnlyTile) ...[
-                                                        Text(
-                                                          formatTimeRange(
-                                                            lecture.start,
-                                                            lecture.end,
-                                                            widget.l10n,
-                                                            use24HourTime:
-                                                                widget.schedule
-                                                                    .use24HourTime,
-                                                          ),
-                                                          style: TextStyle(
-                                                            fontSize:
-                                                                compactTile
-                                                                    ? 9
-                                                                    : 11,
-                                                          ),
-                                                        ),
-                                                        if (widget.schedule
-                                                            .enableMeetingNumbers)
-                                                          Text(
-                                                            '#${effectiveMeetingNumber(lecture, widget.allLectures)}',
-                                                            style: TextStyle(
-                                                              fontSize:
-                                                                  compactTile
-                                                                      ? 9
-                                                                      : 11,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                            ),
-                                                          ),
-                                                      ],
-                                                    ],
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (!titleOnlyTile)
+                                                Container(
+                                                  width: double.infinity,
+                                                  height: 4,
+                                                  decoration: BoxDecoration(
+                                                    color: statusColor(
+                                                        lecture.status),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            3),
                                                   ),
                                                 ),
-                                              );
-                                            },
+                                              if (!titleOnlyTile)
+                                                SizedBox(
+                                                    height:
+                                                        compactTile ? 2 : 4),
+                                              FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                alignment: AlignmentDirectional.centerStart,
+                                                child: Text(
+                                                  lecture.type.isNotEmpty
+                                                      ? '${localizeCourseName(lecture.courseName, widget.l10n)} - ${lecture.type}'
+                                                      : localizeCourseName(lecture.courseName, widget.l10n),
+                                                  maxLines:
+                                                      titleOnlyTile ? 1 : 2,
+                                                  softWrap: true,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: titleOnlyTile
+                                                        ? 10
+                                                        : (compactTile
+                                                            ? 9
+                                                            : 11),
+                                                    height: 1.1,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (!titleOnlyTile)
+                                                Text(
+                                                  widget.schedule
+                                                          .enableMeetingNumbers
+                                                      ? '${formatTimeRange(
+                                                          lecture.start,
+                                                          lecture.end,
+                                                          widget.l10n,
+                                                          use24HourTime: widget
+                                                              .schedule
+                                                              .use24HourTime,
+                                                        )}  #${effectiveMeetingNumber(lecture, widget.allLectures)}'
+                                                      : formatTimeRange(
+                                                          lecture.start,
+                                                          lecture.end,
+                                                          widget.l10n,
+                                                          use24HourTime: widget
+                                                              .schedule
+                                                              .use24HourTime,
+                                                        ),
+                                                  style: TextStyle(
+                                                    fontSize: compactTile
+                                                        ? 9
+                                                        : 11,
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ),
                                       ),

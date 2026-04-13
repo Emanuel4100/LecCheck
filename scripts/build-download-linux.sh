@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Builds release Linux bundle and archives to your Downloads folder (or LEC_CHECK_OUT_DIR).
-# The archive includes install.sh and uninstall.sh inside the bundle.
+# The archive includes setup.sh (interactive install/uninstall) inside the bundle.
 # Usage: from repo root: ./scripts/build-download-linux.sh
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -59,132 +59,10 @@ if [[ ! -d "${BUNDLE}" ]]; then
   exit 1
 fi
 
-# --- Write install.sh and uninstall.sh as standalone files ---
-_write_install_script() {
-  local dest="$1"
-  cat > "${dest}" << 'SCRIPTEOF'
-#!/usr/bin/env bash
-set -euo pipefail
+cp "${ROOT}/scripts/linux-setup-template.sh" "${BUNDLE}/setup.sh"
+chmod +x "${BUNDLE}/setup.sh"
 
-APP_ID="com.leccheck.app"
-APP_NAME="LecCheck"
-BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BINARY="${BUNDLE_DIR}/leccheck"
-
-if [[ ! -x "${BINARY}" ]]; then
-  echo "Error: ${BINARY} not found or not executable."
-  echo "Run this script from inside the extracted bundle directory."
-  exit 1
-fi
-
-DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
-BIN_DIR="${HOME}/.local/bin"
-DESKTOP_DIR="${DATA_DIR}/applications"
-ICON_BASE="${DATA_DIR}/icons/hicolor"
-
-echo "Installing ${APP_NAME}..."
-
-mkdir -p "${BIN_DIR}"
-ln -sf "${BINARY}" "${BIN_DIR}/leccheck"
-
-mkdir -p "${DESKTOP_DIR}"
-{
-  echo "[Desktop Entry]"
-  echo "Version=1.0"
-  echo "Type=Application"
-  echo "Name=${APP_NAME}"
-  echo "GenericName=Lecture schedule"
-  echo "Comment=Track lectures, attendance, and your semester schedule"
-  echo "Exec=${BINARY} %u"
-  echo "Icon=${APP_ID}"
-  echo "Terminal=false"
-  echo "Categories=Education;Office;"
-  echo "StartupNotify=true"
-  echo "StartupWMClass=${APP_ID}"
-  echo "Keywords=lecture;schedule;school;university;calendar;"
-  echo "MimeType="
-} > "${DESKTOP_DIR}/${APP_ID}.desktop"
-
-for SIZE in 64 128 256 512; do
-  ICON_SRC="${BUNDLE_DIR}/data/icons/${APP_ID}-${SIZE}.png"
-  if [[ -f "${ICON_SRC}" ]]; then
-    ICON_DIR="${ICON_BASE}/${SIZE}x${SIZE}/apps"
-    mkdir -p "${ICON_DIR}"
-    cp "${ICON_SRC}" "${ICON_DIR}/${APP_ID}.png"
-  fi
-done
-
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -f -t "${ICON_BASE}" 2>/dev/null || true
-fi
-if command -v update-desktop-database >/dev/null 2>&1; then
-  update-desktop-database "${DESKTOP_DIR}" 2>/dev/null || true
-fi
-
-echo ""
-echo "${APP_NAME} installed successfully!"
-echo "  Binary:  ${BINARY}"
-echo "  Symlink: ${BIN_DIR}/leccheck"
-echo "  Desktop: ${DESKTOP_DIR}/${APP_ID}.desktop"
-echo ""
-echo "You can launch it from your application menu or run: leccheck"
-echo "To uninstall, run: ${BUNDLE_DIR}/uninstall.sh"
-SCRIPTEOF
-  chmod +x "${dest}"
-}
-
-_write_uninstall_script() {
-  local dest="$1"
-  cat > "${dest}" << 'SCRIPTEOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-APP_ID="com.leccheck.app"
-APP_NAME="LecCheck"
-
-DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
-BIN_DIR="${HOME}/.local/bin"
-DESKTOP_DIR="${DATA_DIR}/applications"
-ICON_BASE="${DATA_DIR}/icons/hicolor"
-
-echo "Uninstalling ${APP_NAME}..."
-
-if [[ -L "${BIN_DIR}/leccheck" ]]; then
-  rm -f "${BIN_DIR}/leccheck"
-  echo "  Removed ${BIN_DIR}/leccheck"
-fi
-
-if [[ -f "${DESKTOP_DIR}/${APP_ID}.desktop" ]]; then
-  rm -f "${DESKTOP_DIR}/${APP_ID}.desktop"
-  echo "  Removed ${DESKTOP_DIR}/${APP_ID}.desktop"
-fi
-
-for SIZE in 64 128 256 512; do
-  ICON="${ICON_BASE}/${SIZE}x${SIZE}/apps/${APP_ID}.png"
-  if [[ -f "${ICON}" ]]; then
-    rm -f "${ICON}"
-    echo "  Removed ${ICON}"
-  fi
-done
-
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -f -t "${ICON_BASE}" 2>/dev/null || true
-fi
-if command -v update-desktop-database >/dev/null 2>&1; then
-  update-desktop-database "${DESKTOP_DIR}" 2>/dev/null || true
-fi
-
-echo ""
-echo "${APP_NAME} uninstalled."
-echo "You can now delete this bundle directory if you want."
-SCRIPTEOF
-  chmod +x "${dest}"
-}
-
-_write_install_script "${BUNDLE}/install.sh"
-_write_uninstall_script "${BUNDLE}/uninstall.sh"
-
-# --- Copy icon assets into the bundle for install.sh to use ---
+# --- Copy icon assets into the bundle for setup.sh to use ---
 APP_ID="com.leccheck.app"
 ICON_DEST="${BUNDLE}/data/icons"
 mkdir -p "${ICON_DEST}"
@@ -201,12 +79,12 @@ tar -C "${APP_DIR}/build/linux/x64/release" -czf "${ARCHIVE}" bundle
 
 echo "Done: ${ARCHIVE}"
 echo ""
-echo "To install after extracting:"
+echo "After extracting:"
 echo "  tar xzf $(basename "${ARCHIVE}")"
 echo "  cd bundle"
-echo "  ./install.sh"
+echo "  ./setup.sh"
 
-# Also run desktop integration for the current build
+# Also install this build non-interactively for the current user
 echo ""
 echo "Installing desktop integration for this build..."
-"${BUNDLE}/install.sh"
+"${BUNDLE}/setup.sh" install

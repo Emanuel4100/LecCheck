@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -23,6 +24,21 @@ Future<void> exportScheduleRoot(ScheduleRootState root) async {
     );
     return;
   }
+
+  // Linux: use file_picker save dialog (share_plus is unreliable on desktop)
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+    final savePath = await FilePicker.saveFile(
+      dialogTitle: 'Export LecCheck data',
+      fileName: 'leccheck_export.json',
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+    if (savePath != null) {
+      await File(savePath).writeAsString(json);
+    }
+    return;
+  }
+
   final dir = await getTemporaryDirectory();
   final path =
       '${dir.path}/leccheck_export_${DateTime.now().millisecondsSinceEpoch}.json';

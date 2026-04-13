@@ -1,144 +1,52 @@
 # LecCheck
 
-LecCheck is a lecture and semester tracking app built with **Flutter** (Dart) for web, Android, and Linux desktop.
+Flutter app for **Android** and **Linux**: weekly schedule grid, lectures list, attendance stats, semesters/courses, EN/HE, light/dark themes. Offline-first JSON storage; optional **Google sign-in** and **Firestore** sync (native SDK on mobile, REST + browser OAuth on Linux).
 
-## Stack
+---
 
-- Flutter + Dart (Material 3)
-- Localization: English and Hebrew
-- Targets: Web, Android, Linux desktop (iOS/macOS/Windows scaffolding included)
-- Optional **Firebase Auth** (Google) and **Cloud Firestore** sync (see below)
-
-## Project structure
-
-- `flutter_app/` — application source (run and build from here)
-- `flutter_app/lib/main.dart` — Firebase bootstrap and `MaterialApp`
-- `flutter_app/lib/app/leccheck_root.dart` — navigation shell, persistence, login/onboarding
-- `ARCHITECTURE.md` — Flutter architecture and direction
-- `docs/` — parity QA checklist, migration notes, cutover runbook
-- `scripts/` — release helpers that copy binaries to **~/Downloads** (or `LEC_CHECK_OUT_DIR`; see [`download/README.md`](download/README.md))
-- `run-dev.sh` / `run-dev.fish` — helpers to run the app with a sensible browser on Linux
-
-## Features
-
-- Guest flow or **Continue with Google** (web uses Firebase `signInWithPopup` to avoid extra Google People API setup)
-- **Local persistence**: JSON schedule bundle — file-based on mobile/desktop (`path_provider`), **SharedPreferences / localStorage** on web
-- **Cloud sync** (when signed in): schedule document at `users/{userId}/leccheck/main` (see [`flutter_app/lib/core/schedule/firestore_schedule_store.dart`](flutter_app/lib/core/schedule/firestore_schedule_store.dart)); merge uses `savedAt` timestamps
-- Semester onboarding (language, date range, week start)
-- Course setup: **course editor** (name, optional code, lecturer, link, notes, extra links)
-- **Weekly meetings** per course (time, location, type, per-meeting links)
-- **Dashboard**: weekly grid, lectures list, stats, settings
-- **Manage courses** from Settings and the FAB menu
-- Lecture status and optional recording link; **Resources** via `url_launcher`
-- **Theme**: light, dark, or system (persisted)
-
-Feature toggles: [`flutter_app/lib/core/config/feature_flags.dart`](flutter_app/lib/core/config/feature_flags.dart)
-
-## Firebase
-
-1. Android: `google-services.json` under [`flutter_app/android/app/`](flutter_app/android/app/) (`com.leccheck.app`).
-2. All platforms: options in [`flutter_app/lib/firebase_options.dart`](flutter_app/lib/firebase_options.dart). Regenerate with [FlutterFire CLI](https://firebase.google.com/docs/flutter/setup): `dart pub global activate flutterfire_cli` then `flutterfire configure` from `flutter_app/`.
-3. **Authentication**: enable **Google** in Firebase Console for your project.
-4. **Firestore rules**: deploy [`flutter_app/firestore.rules`](flutter_app/firestore.rules). From `flutter_app/`, with CLI logged in: `firebase deploy --only firestore:rules`. Default project is set in [`flutter_app/.firebaserc`](flutter_app/.firebaserc) (`leccheck-app-db`).
-5. **Web OAuth**: configure authorized JavaScript origins for your hosting URL; `web/index.html` includes the Google Sign-In client meta where needed.
-6. **Linux**: Firebase is skipped until Linux is added in FlutterFire; local-only mode still works.
-
-## Prerequisites
-
-- [Flutter SDK](https://docs.flutter.dev/get-started/install)
-- Android SDK for Android builds
-- Chrome, Chromium, or Brave for web (`CHROME_EXECUTABLE` if needed)
-- Linux: `clang`, `cmake`, `ninja`, GTK dev packages (see Flutter Linux docs)
-
-## Clone and run
+## Quick start
 
 ```bash
 git clone https://github.com/Emanuel4100/LecCheck.git
 cd LecCheck/flutter_app
 flutter pub get
-flutter doctor
+flutter run -d linux    # or -d android
 ```
 
-### Web
+**Release builds** (artifacts under `~/Downloads/` unless scripted otherwise):
 
-```bash
-cd flutter_app
-flutter run -d chrome
-```
 
-### Android
+| Script                                | Output                                                |
+| ------------------------------------- | ----------------------------------------------------- |
+| `./scripts/build-download-linux.sh`   | Linux tarball + `setup.sh` (install/uninstall menu)   |
+| `./scripts/build-download-android.sh` | APK                                                   |
+| `./scripts/release.sh`                | Version bump, both platforms, optional GitHub Release |
 
-```bash
-cd flutter_app
-flutter run -d android
-```
 
-### Linux
+CI: push a `v*` tag → `.github/workflows/release.yml` can publish a release.
 
-```bash
-cd flutter_app
-flutter run -d linux
-```
+---
 
-### Helper scripts (repo root)
+## Repo layout
 
-```bash
-./run-dev.sh chrome
-./run-dev.sh android
-./run-dev.sh linux
-```
+- `**flutter_app/`** — app (`lib/main.dart`, `lib/app/leccheck_root.dart`, features under `lib/features/`)
+- `**flutter_app/.env.example**` — copy to `.env` for Linux OAuth (never commit secrets)
+- `**scripts/**` — build / install helpers
 
-Fish shell: `./run-dev.fish` (same idea).
+---
 
-Override the Flutter binary:
+## Firebase (for cloud sync)
 
-```bash
-FLUTTER_BIN=~/development/flutter/bin/flutter ./run-dev.sh chrome
-```
+1. Add `**google-services.json**` → `flutter_app/android/app/` (package `com.leccheck.app`).
+2. Regenerate `**flutter_app/lib/firebase_options.dart**` with `flutterfire configure` if you use a new project.
+3. Firebase Console: enable **Google** sign-in; deploy rules: `firebase deploy --only firestore:rules` from `flutter_app/`.
+4. **Linux:** fill `flutter_app/.env` from `.env.example` (Desktop OAuth client).
 
-**Brave on Linux:**
+---
 
-```bash
-export CHROME_EXECUTABLE=/usr/bin/brave-browser
-./run-dev.sh chrome
-```
+## Notable behavior
 
-## Build release artifacts
+- **Sync:** Debounced writes to Firestore; Android listens for remote updates; Linux polls while the app runs.
+- **Notifications:** Meeting follow-ups on **Android** (not Linux desktop).
+- **Secrets:** OAuth client secret stays in `.env`, not in source.
 
-### Quick manual builds
-
-```bash
-cd flutter_app
-flutter build web
-flutter build apk --release
-flutter build linux --release
-```
-
-### Scripts → `~/Downloads` (or `LEC_CHECK_OUT_DIR`)
-
-From the **repository root**:
-
-```bash
-./scripts/build-download-linux.sh    # → ~/Downloads/leccheck-linux-x64-<version>.tar.gz
-./scripts/build-download-android.sh  # → ~/Downloads/leccheck-android-<version>.apk
-```
-
-See [`download/README.md`](download/README.md). APKs from the script are for sideloading; **Google Play** uses `flutter build appbundle` (AAB), not this APK path.
-
-`FLUTTER_BIN` is honored the same way as `run-dev.sh`.
-
-## App icons (Android / iOS)
-
-After changing `flutter_app/assets/branding/app_icon.png`:
-
-```bash
-cd flutter_app
-dart run flutter_launcher_icons
-```
-
-## Docs
-
-- `ARCHITECTURE.md`
-- `docs/MIGRATION_PARITY_CHECKLIST.md`
-- `docs/PARITY_QA_CHECKLIST.md`
-- `docs/CUTOVER_RUNBOOK.md`

@@ -68,6 +68,9 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     firestore: _cloudStore(),
   );
   bool _bootstrapping = true;
+  String _bootstrapMessage = '';
+  StreamSubscription<dynamic>? _cloudWatchSub;
+  Timer? _cloudPollTimer;
 
   @override
   void initState() {
@@ -81,6 +84,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
 
   @override
   void dispose() {
+    _stopCloudSync();
     setMeetingNotificationActionHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     final root = _scheduleRoot;
@@ -114,16 +118,16 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
 
   Future<void> _bootstrap() async {
     try {
-      // Avoid reading currentUser / cloud before native auth has restored the session.
       final inWidgetTestZone =
           Zone.current[leccheckWidgetTestZoneKey] == true;
       if (firebaseSupportedOnThisPlatform &&
           isFirebaseInitialized &&
           !inWidgetTestZone) {
+        if (mounted) setState(() => _bootstrapMessage = 'Restoring session…');
         try {
           await FirebaseAuth.instance
               .authStateChanges()
-              .timeout(const Duration(seconds: 5))
+              .timeout(const Duration(seconds: 3))
               .first;
         } on TimeoutException {
           if (kDebugMode) {
@@ -133,6 +137,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           }
         }
       }
+      if (mounted) setState(() => _bootstrapMessage = 'Loading schedule…');
       final r = await _loadInitialSchedule();
       if (!mounted) return;
       setState(() {
@@ -141,6 +146,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
       });
       _scheduleSyncAppLocaleFromSchedule();
       unawaited(rescheduleMeetingNotifications(_scheduleRoot));
+      _startCloudSync();
     } on Object catch (e, st) {
       if (kDebugMode) {
         debugPrint('Bootstrap failed: $e\n$st');
@@ -184,6 +190,74 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     if (root == null) return;
     _persistence.persistDebounced(root);
     unawaited(rescheduleMeetingNotifications(root));
+  }
+
+  // ── Two-way cloud sync ──────────────────────────────────────────
+
+  void _startCloudSync() {
+    _stopCloudSync();
+    final uid = currentAuthUid;
+    if (uid == null || !FeatureFlags.enableFirebaseSync || !isCloudAvailable) {
+      return;
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+      unawaited(_pollRemote(uid));
+      _cloudPollTimer = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => unawaited(_pollRemote(uid)),
+      );
+    } else if (firebaseSupportedOnThisPlatform && isFirebaseInitialized) {
+      _cloudWatchSub = _persistence.firestore.watchRaw(uid).listen(
+        (event) {
+          if (event.hasPendingWrites) return;
+          final bundle = event.bundle;
+          if (bundle == null) return;
+          _applyRemoteBundle(bundle);
+        },
+        onError: (Object e) {
+          if (kDebugMode) debugPrint('Cloud watch error: $e');
+          _persistence.syncStatus.value = SyncStatus.error;
+        },
+      );
+    }
+  }
+
+  void _stopCloudSync() {
+    _cloudWatchSub?.cancel();
+    _cloudWatchSub = null;
+    _cloudPollTimer?.cancel();
+    _cloudPollTimer = null;
+  }
+
+  Future<void> _pollRemote(String uid) async {
+    final remote = await _persistence.pullIfNewer(uid);
+    if (remote != null && mounted) _applyRemoteRoot(remote);
+  }
+
+  void _applyRemoteBundle(Map<String, dynamic> bundle) {
+    final remoteAt =
+        (bundle['savedAt'] as num?)?.toInt() ?? 0;
+    if (remoteAt <= _persistence.lastLocalSavedAt) {
+      _persistence.syncStatus.value = SyncStatus.synced;
+      return;
+    }
+    final root = scheduleRootFromJson(bundle);
+    if (root == null) return;
+    _persistence.lastLocalSavedAt = remoteAt;
+    unawaited(_persistence.local.saveRaw(bundle));
+    _persistence.syncStatus.value = SyncStatus.synced;
+    _applyRemoteRoot(root);
+  }
+
+  void _applyRemoteRoot(ScheduleRootState root) {
+    if (!mounted) return;
+    setState(() {
+      _scheduleRoot = root;
+      schedule = root.activeSchedule;
+      _invalidateLectureCache();
+      _weeklyWeekSyncToken++;
+    });
   }
 
   void _handleMeetingNotificationAction(String payload, String actionId) {
@@ -241,6 +315,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
   }
 
   Future<void> _handleLogout() async {
+    _stopCloudSync();
     await signOutEverywhere();
     await _clearPendingLocalMerge();
     if (!mounted) return;
@@ -288,6 +363,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
         if (!mounted) return;
         setState(() => _applyLoadedState((root: localRoot, user: user)));
         _scheduleSyncAppLocaleFromSchedule();
+        _startCloudSync();
         return;
       }
       await prefs.setBool(kPendingLocalMergeKey, false);
@@ -344,6 +420,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           await prefs.setBool(kPendingLocalMergeKey, false);
           setState(() => _applyLoadedState((root: localRoot, user: user)));
           _scheduleSyncAppLocaleFromSchedule();
+          _startCloudSync();
           return;
         }
         if (choice == 'cloud') {
@@ -351,6 +428,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           await prefs.setBool(kPendingLocalMergeKey, false);
           setState(() => _applyLoadedState((root: cloudRoot, user: user)));
           _scheduleSyncAppLocaleFromSchedule();
+          _startCloudSync();
           return;
         }
       }
@@ -361,6 +439,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     await prefs.setBool(kPendingLocalMergeKey, false);
     setState(() => _applyLoadedState(r));
     _scheduleSyncAppLocaleFromSchedule();
+    _startCloudSync();
   }
 
   /// Returns a [FirestoreScheduleStore] appropriate for the current platform
@@ -738,6 +817,19 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     _persistSchedule();
   }
 
+  void recountMeetings() {
+    final sc = schedule;
+    if (sc == null) return;
+    setState(() {
+      for (final c in sc.courses) {
+        rebuildLecturesForCourse(c, sc);
+      }
+      applyNoClassDatesToSchedule(sc);
+      _invalidateLectureCache();
+    });
+    _persistSchedule();
+  }
+
   void updateUse24HourTime(bool value) {
     final sc = schedule;
     if (sc == null) return;
@@ -916,8 +1008,24 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     if (_bootstrapping) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              if (_bootstrapMessage.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  _bootstrapMessage,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ],
+          ),
+        ),
       );
     }
     switch (screen) {
@@ -979,6 +1087,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           onChangeWeekStart: updateWeekStartsOn,
           onChangeVisibleDays: updateVisibleDays,
           onToggleMeetingNumbers: updateMeetingNumbers,
+          onRecountMeetings: recountMeetings,
           onUse24HourTimeChanged: updateUse24HourTime,
           onChangeStartDate: updateStartDate,
           onChangeEndDate: updateEndDate,
@@ -988,6 +1097,21 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           onThemeModeChanged: widget.onThemeModeChanged,
           onReset: () => unawaited(_handleReset()),
           onLogout: () => unawaited(_handleLogout()),
+          onLogin: () => unawaited(_handleLogout()),
+          isSignedIn: currentAuthUid != null,
+          syncStatus: _persistence.syncStatus,
+          onClearCache: () async {
+            await _persistence.clearLocal();
+            if (mounted) setState(() {
+              _scheduleRoot = null;
+              schedule = null;
+              _invalidateLectureCache();
+            });
+          },
+          onRebootstrap: () {
+            setState(() => _bootstrapping = true);
+            unawaited(_bootstrap());
+          },
           weeklyWeekSyncToken: _weeklyWeekSyncToken,
           onJumpToCurrentWeek: _jumpWeeklyToCurrentWeek,
           lecturesSearchFocusToken: _lecturesSearchFocusToken,

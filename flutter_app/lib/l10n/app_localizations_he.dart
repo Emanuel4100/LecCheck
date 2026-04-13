@@ -181,6 +181,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get logout => 'התנתקות';
 
   @override
+  String get login => 'התחברות';
+
+  @override
   String get resetSemester => 'איפוס סמסטר';
 
   @override
@@ -278,6 +281,12 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get autoMeetingNumbers => 'מספור מפגשים אוטומטי';
+
+  @override
+  String get recountMeetings => 'ספור מחדש';
+
+  @override
+  String get recountMeetingsDone => 'מספרי המפגשים חושבו מחדש.';
 
   @override
   String get semesterDefaultName => 'סמסטר';
@@ -563,6 +572,42 @@ class AppLocalizationsHe extends AppLocalizations {
   String get themeModeSystem => 'לפי המערכת';
 
   @override
+  String get settingsSectionCourses => 'קורסים';
+
+  @override
+  String get settingsSectionSchedule => 'לוח זמנים';
+
+  @override
+  String get settingsSectionAppearance => 'מראה';
+
+  @override
+  String get settingsSectionNotifications => 'התראות';
+
+  @override
+  String get settingsSectionData => 'נתונים';
+
+  @override
+  String get settingsSectionAccount => 'חשבון';
+
+  @override
+  String get syncStatusLabel => 'סנכרון ענן';
+
+  @override
+  String get syncStatusSynced => 'מסונכרן';
+
+  @override
+  String get syncStatusSyncing => 'מסנכרן…';
+
+  @override
+  String get syncStatusNoNetwork => 'אין חיבור לאינטרנט';
+
+  @override
+  String get syncStatusError => 'שגיאת סנכרון';
+
+  @override
+  String get syncStatusOffline => 'מצב לא מקוון';
+
+  @override
   String get aboutSectionTitle => 'אודות';
 
   @override
@@ -718,4 +763,44 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get notificationPermissionDenied =>
       'הרשאת התראות נדחתה. הפעל אותה בהגדרות המערכת.';
+
+  @override
+  String get devNoDevOptions => '!אין אפשרויות מפתח בשבילך';
+
+  @override
+  String get devModeEnabled => '!מצב מפתח הופעל';
+
+  @override
+  String get devModeDisabled => '.מצב מפתח כובה';
+
+  @override
+  String get settingsSectionDeveloper => 'מפתח';
+
+  @override
+  String get devForceNotification => 'שלח התראת בדיקה';
+
+  @override
+  String get devForceNotificationSent => '.(התראת בדיקה תוזמנה (5 שניות';
+
+  @override
+  String get devShowLogs => 'יומן אפליקציה';
+
+  @override
+  String get devSyncDetails => 'פרטי סנכרון';
+
+  @override
+  String get devClearCache => 'נקה מטמון מקומי';
+
+  @override
+  String get devClearCacheConfirm =>
+      '?פעולה זו תמחק את כל הנתונים המקומיים. האם אתה בטוח';
+
+  @override
+  String get devClearCacheDone => '.המטמון המקומי נוקה';
+
+  @override
+  String get devDisableDevMode => 'כבה מצב מפתח';
+
+  @override
+  String get devRebootstrap => 'אתחול מחדש';
 }

@@ -180,6 +180,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logout => 'Logout';
 
   @override
+  String get login => 'Login';
+
+  @override
   String get resetSemester => 'Reset Semester';
 
   @override
@@ -277,6 +280,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoMeetingNumbers => 'Auto meeting numbers';
+
+  @override
+  String get recountMeetings => 'Recount';
+
+  @override
+  String get recountMeetingsDone => 'Meeting numbers recounted.';
 
   @override
   String get semesterDefaultName => 'Semester';
@@ -567,6 +576,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeSystem => 'System default';
 
   @override
+  String get settingsSectionCourses => 'Courses';
+
+  @override
+  String get settingsSectionSchedule => 'Schedule';
+
+  @override
+  String get settingsSectionAppearance => 'Appearance';
+
+  @override
+  String get settingsSectionNotifications => 'Notifications';
+
+  @override
+  String get settingsSectionData => 'Data';
+
+  @override
+  String get settingsSectionAccount => 'Account';
+
+  @override
+  String get syncStatusLabel => 'Cloud Sync';
+
+  @override
+  String get syncStatusSynced => 'Synced';
+
+  @override
+  String get syncStatusSyncing => 'Syncing…';
+
+  @override
+  String get syncStatusNoNetwork => 'No internet connection';
+
+  @override
+  String get syncStatusError => 'Sync error';
+
+  @override
+  String get syncStatusOffline => 'Offline mode';
+
+  @override
   String get aboutSectionTitle => 'About';
 
   @override
@@ -723,4 +768,45 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationPermissionDenied =>
       'Notification permission denied. Enable it in system settings.';
+
+  @override
+  String get devNoDevOptions => 'No dev options for you!';
+
+  @override
+  String get devModeEnabled => 'Developer mode enabled!';
+
+  @override
+  String get devModeDisabled => 'Developer mode disabled.';
+
+  @override
+  String get settingsSectionDeveloper => 'Developer';
+
+  @override
+  String get devForceNotification => 'Send test notification';
+
+  @override
+  String get devForceNotificationSent =>
+      'Test notification scheduled (5 seconds).';
+
+  @override
+  String get devShowLogs => 'App logs';
+
+  @override
+  String get devSyncDetails => 'Sync details';
+
+  @override
+  String get devClearCache => 'Clear local cache';
+
+  @override
+  String get devClearCacheConfirm =>
+      'This will delete all local data. Are you sure?';
+
+  @override
+  String get devClearCacheDone => 'Local cache cleared.';
+
+  @override
+  String get devDisableDevMode => 'Disable developer mode';
+
+  @override
+  String get devRebootstrap => 'Force re-bootstrap';
 }

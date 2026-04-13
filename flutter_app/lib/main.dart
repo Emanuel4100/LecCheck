@@ -13,9 +13,11 @@ import 'l10n/app_localizations.dart';
 import 'core/auth/linux_auth_bridge.dart';
 import 'core/firebase/leccheck_firebase.dart';
 import 'core/notifications/meeting_notifications.dart';
+import 'features/dashboard/dev_settings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppLogBuffer.instance.install();
   await initMeetingNotifications();
   if (firebaseSupportedOnThisPlatform) {
     try {

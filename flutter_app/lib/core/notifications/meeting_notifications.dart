@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart'
     show debugPrint, defaultTargetPlatform, kDebugMode, kIsWeb, TargetPlatform;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
@@ -18,6 +19,16 @@ const String _channelId = 'leccheck_meeting_followup';
 const String _channelName = 'Meeting follow-up';
 
 final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+
+/// False in widget tests / isolates where [initMeetingNotifications] never ran.
+bool _notificationsPluginRegistered() {
+  try {
+    FlutterLocalNotificationsPlatform.instance;
+    return true;
+  } on Object {
+    return false;
+  }
+}
 
 /// Linux builds skip local notification plugin init (not supported reliably).
 bool get meetingNotificationsSupportedOnPlatform {
@@ -43,6 +54,49 @@ void _onNotificationResponse(NotificationResponse response) {
   }
 }
 
+Future<void> _ensureAndroidNotificationChannel() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+  final android = _plugin.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>();
+  if (android == null) return;
+  const channel = AndroidNotificationChannel(
+    _channelId,
+    _channelName,
+    description: 'After a session ends, quick status update',
+    importance: Importance.high,
+  );
+  await android.createNotificationChannel(channel);
+}
+
+/// Android 13+ notifications + exact alarms (12+) so scheduled notifications fire on time.
+Future<bool> ensureAndroidNotificationSchedulingReady() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return true;
+  if (!_notificationsPluginRegistered()) return false;
+  final android = _plugin.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>();
+  if (android == null) return false;
+
+  await _ensureAndroidNotificationChannel();
+
+  var ok = await android.areNotificationsEnabled() ?? true;
+  if (!ok) {
+    ok = await android.requestNotificationsPermission() ?? false;
+  }
+  if (!ok) return false;
+
+  final canExact = await android.canScheduleExactNotifications() ?? true;
+  if (!canExact) {
+    await android.requestExactAlarmsPermission();
+    final after = await android.canScheduleExactNotifications() ?? false;
+    if (!after && kDebugMode) {
+      debugPrint(
+        'Exact alarm permission not granted; notifications may be delayed.',
+      );
+    }
+  }
+  return true;
+}
+
 Future<void> initMeetingNotifications() async {
   if (kIsWeb || !meetingNotificationsSupportedOnPlatform) return;
   tzdata.initializeTimeZones();
@@ -62,6 +116,7 @@ Future<void> initMeetingNotifications() async {
     settings: initSettings,
     onDidReceiveNotificationResponse: _onNotificationResponse,
   );
+  await _ensureAndroidNotificationChannel();
 }
 
 Future<bool> requestAndroidNotificationPermission() async {
@@ -73,8 +128,16 @@ Future<bool> requestAndroidNotificationPermission() async {
   return r ?? false;
 }
 
+const AndroidScheduleMode _androidScheduleMode =
+    AndroidScheduleMode.exactAllowWhileIdle;
+
 Future<void> rescheduleMeetingNotifications(ScheduleRootState? root) async {
   if (kIsWeb || !meetingNotificationsSupportedOnPlatform) return;
+  if (!_notificationsPluginRegistered()) return;
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    final ready = await ensureAndroidNotificationSchedulingReady();
+    if (!ready) return;
+  }
   final prefs = await SharedPreferences.getInstance();
   final enabled = prefs.getBool(kMeetingNotifEnabled) ?? false;
   await _plugin.cancelAll();
@@ -139,7 +202,7 @@ Future<void> rescheduleMeetingNotifications(ScheduleRootState? root) async {
           id: id,
           scheduledDate: tz.TZDateTime.from(trigger, tz.local),
           notificationDetails: details,
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          androidScheduleMode: _androidScheduleMode,
           title: 'How was class?',
           body: l.courseName,
           payload: payload,
@@ -194,4 +257,37 @@ Future<bool> getMeetingNotificationsHeadsUp() async {
 Future<void> setMeetingNotificationsHeadsUp(bool value) async {
   final p = await SharedPreferences.getInstance();
   await p.setBool(kMeetingNotifHeadsUp, value);
+}
+
+/// Fire a test notification in ~5 seconds (dev mode). Returns false if blocked (e.g. permission).
+Future<bool> scheduleTestNotification() async {
+  if (!meetingNotificationsSupportedOnPlatform) return false;
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    final ok = await ensureAndroidNotificationSchedulingReady();
+    if (!ok) {
+      if (kDebugMode) {
+        debugPrint('scheduleTestNotification: Android prerequisites not met.');
+      }
+      return false;
+    }
+  }
+  const details = NotificationDetails(
+    android: AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: 'After a session ends, quick status update',
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+  );
+  final when = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5));
+  await _plugin.zonedSchedule(
+    id: 99999,
+    scheduledDate: when,
+    notificationDetails: details,
+    androidScheduleMode: _androidScheduleMode,
+    title: 'LecCheck Test',
+    body: 'This is a test notification from developer settings.',
+  );
+  return true;
 }
