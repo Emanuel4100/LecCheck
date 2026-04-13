@@ -14,9 +14,10 @@ void rebuildLecturesForCourse(Course course, SemesterSchedule schedule) {
 
   course.lectures.clear();
   for (final meeting in course.meetings) {
-    var date = schedule.startDate;
-    while (!date.isAfter(schedule.endDate)) {
-      if (date.weekday == meeting.weekday) {
+    if (meeting.isOneOff) {
+      final date = meeting.specificDate!;
+      if (!date.isBefore(schedule.startDate) &&
+          !date.isAfter(schedule.endDate)) {
         final k = _lecturePreserveKey(date, meeting.start, meeting.end);
         final p = preserved[k];
         course.lectures.add(
@@ -36,7 +37,31 @@ void rebuildLecturesForCourse(Course course, SemesterSchedule schedule) {
           ),
         );
       }
-      date = date.add(const Duration(days: 1));
+    } else {
+      var date = schedule.startDate;
+      while (!date.isAfter(schedule.endDate)) {
+        if (date.weekday == meeting.weekday) {
+          final k = _lecturePreserveKey(date, meeting.start, meeting.end);
+          final p = preserved[k];
+          course.lectures.add(
+            Lecture(
+              courseId: course.id,
+              courseName: course.name,
+              date: date,
+              start: meeting.start,
+              end: meeting.end,
+              room: meeting.room,
+              type: meeting.type,
+              color: course.color,
+              meetingId: meeting.id,
+              status: p?.$1 ?? LectureStatus.pending,
+              recordingLink: p?.$2,
+              notes: p?.$3 ?? '',
+            ),
+          );
+        }
+        date = date.add(const Duration(days: 1));
+      }
     }
   }
   course.lectures.sort((a, b) {

@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config/about_info.dart';
 import '../../core/notifications/meeting_notifications.dart';
+import '../../core/platform/adaptive.dart';
 import '../../core/ui/app_icons.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
@@ -68,7 +70,12 @@ class SettingsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderedStartDays = orderedWeekdaysFromStart(schedule.weekStartsOn);
-    return ListView(
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: Adaptive.isDesktop(context) ? 720 : double.infinity,
+        ),
+        child: ListView(
       children: [
         Card(
           child: Padding(
@@ -449,6 +456,8 @@ class SettingsTab extends StatelessWidget {
           ),
         ),
       ],
+    ),
+      ),
     );
   }
 
@@ -722,8 +731,17 @@ class _MeetingNotificationSettingsState
   }
 
   Future<void> _applyEnabled(bool v) async {
-    if (v) {
-      await requestAndroidNotificationPermission();
+    if (v && defaultTargetPlatform == TargetPlatform.android) {
+      final granted = await requestAndroidNotificationPermission();
+      if (!mounted) return;
+      if (!granted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.l10n.notificationPermissionDenied),
+          ),
+        );
+        return;
+      }
     }
     await setMeetingNotificationsEnabled(v);
     if (!mounted) return;

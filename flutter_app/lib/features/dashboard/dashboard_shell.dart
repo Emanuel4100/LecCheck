@@ -99,24 +99,19 @@ class DashboardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDesktop = Adaptive.isDesktop(context);
-    final showAppBar = isDesktop || Adaptive.isWebLike(context);
-    final hasBottomNav = !isDesktop;
+    final showAppBar = !Adaptive.isLinuxDesktop &&
+        (isDesktop || Adaptive.isWebLike(context));
     return Scaffold(
       appBar: showAppBar
           ? AppBar(title: Text(l10n.appTitle))
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: (tab == DashboardTab.weekly ||
-              tab == DashboardTab.lectures)
-          ? (hasBottomNav
-              ? FloatingActionButton.small(
-                  onPressed: () => _showAddMenu(context, l10n),
-                  child: const Icon(AppIcons.add),
-                )
-              : FloatingActionButton(
-                  onPressed: () => _showAddMenu(context, l10n),
-                  child: const Icon(AppIcons.add),
-                ))
+      floatingActionButton: (!isDesktop &&
+              (tab == DashboardTab.weekly || tab == DashboardTab.lectures))
+          ? FloatingActionButton.small(
+              onPressed: () => _showAddMenu(context, l10n),
+              child: const Icon(AppIcons.add),
+            )
           : null,
       bottomNavigationBar: isDesktop
           ? null
@@ -172,19 +167,23 @@ class DashboardShell extends StatelessWidget {
             child: SafeArea(
               top: !showAppBar,
               bottom: false,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: tab == DashboardTab.weekly
-                        ? double.infinity
-                        : Adaptive.maxBodyWidth(context),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(Adaptive.horizontalPadding(context)),
-                    child: AnimatedSwitcher(
-                    duration: MotionTokens.normal,
-                    switchInCurve: MotionTokens.standardCurve,
-                    child: switch (tab) {
+              child: Column(
+                children: [
+                  if (isDesktop) _buildDesktopToolbar(context, l10n),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: tab == DashboardTab.weekly
+                              ? double.infinity
+                              : Adaptive.maxBodyWidth(context),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(Adaptive.horizontalPadding(context)),
+                          child: AnimatedSwitcher(
+                          duration: MotionTokens.normal,
+                          switchInCurve: MotionTokens.standardCurve,
+                          child: switch (tab) {
                       DashboardTab.weekly => WeeklyTab(
                         schedule: schedule,
                         allLectures: allLectures,
@@ -242,8 +241,66 @@ class DashboardShell extends StatelessWidget {
                   ),
                 ),
               ),
+                  ),
+                ],
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopToolbar(BuildContext context, AppLocalizations l10n) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: cs.outlineVariant, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          _ToolbarButton(
+            icon: AppIcons.addCourse,
+            label: l10n.addCourse,
+            onPressed: () => onOpenCourseEditor(context),
+          ),
+          const SizedBox(width: 4),
+          _ToolbarButton(
+            icon: AppIcons.addMeeting,
+            label: l10n.addMeeting,
+            onPressed: () {
+              if (schedule.courses.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.addCourseFirst)),
+                );
+              } else {
+                _showAddMeetingDialog(context, l10n);
+              }
+            },
+          ),
+          const SizedBox(width: 4),
+          _ToolbarButton(
+            icon: Icons.edit_note,
+            label: l10n.fabManageCourses,
+            onPressed: () => onOpenManageCourses(context),
+          ),
+          if (tab == DashboardTab.weekly) ...[
+            const SizedBox(width: 4),
+            _ToolbarButton(
+              icon: Icons.today,
+              label: l10n.goToCurrentWeek,
+              onPressed: onJumpToCurrentWeek,
+            ),
+          ],
+          if (tab == DashboardTab.lectures) ...[
+            const SizedBox(width: 4),
+            _ToolbarButton(
+              icon: Icons.search,
+              label: l10n.focusSearchField,
+              onPressed: onRequestLecturesSearchFocus,
+            ),
+          ],
         ],
       ),
     );
@@ -344,7 +401,10 @@ class DashboardShell extends StatelessWidget {
     String type = l10n.lectureType;
     String selectedCourseId = schedule.courses.first.id;
     final activeDays = orderedWeekdaysForSchedule(schedule);
+    if (activeDays.isEmpty) return;
     int weekday = activeDays.first;
+    bool isOneOff = false;
+    DateTime? specificDate;
     final wideMeeting =
         Adaptive.isDesktop(context) || Adaptive.isWebLike(context);
 
@@ -355,6 +415,12 @@ class DashboardShell extends StatelessWidget {
         );
         return;
       }
+      if (isOneOff && specificDate == null) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text(l10n.selectDate)),
+        );
+        return;
+      }
       final course = schedule.courses.firstWhere(
         (c) => c.id == selectedCourseId,
         orElse: () => schedule.courses.first,
@@ -362,11 +428,12 @@ class DashboardShell extends StatelessWidget {
       onAddMeeting(
         course,
         Meeting(
-          weekday: weekday,
+          weekday: isOneOff ? (specificDate?.weekday ?? weekday) : weekday,
           start: start,
           end: end,
           room: roomCtrl.text.trim(),
           type: type,
+          specificDate: isOneOff ? specificDate : null,
         ),
       );
       Navigator.pop(ctx);
@@ -389,20 +456,73 @@ class DashboardShell extends StatelessWidget {
                 .toList(),
             onChanged: (v) => setLocal(() => selectedCourseId = v ?? ''),
           ),
-          DropdownButtonFormField<int>(
-            initialValue: weekday,
-            items: activeDays
-                .map(
-                  (d) => DropdownMenuItem(
-                    value: d,
-                    child: Text(weekdayLabelL10n(d, l10n)),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) =>
-                setLocal(() => weekday = v ?? activeDays.first),
-            decoration: InputDecoration(labelText: l10n.weekday),
+          const SizedBox(height: 8),
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(
+                value: false,
+                label: Text(l10n.weeklyRecurring),
+              ),
+              ButtonSegment(
+                value: true,
+                label: Text(l10n.oneTimeMeeting),
+              ),
+            ],
+            selected: {isOneOff},
+            onSelectionChanged: (v) {
+              if (v.isEmpty) return;
+              setLocal(() {
+                isOneOff = v.first;
+                if (isOneOff && specificDate == null) {
+                  final now = DateTime.now();
+                  specificDate = now.isBefore(schedule.startDate)
+                      ? schedule.startDate
+                      : now.isAfter(schedule.endDate)
+                          ? schedule.endDate
+                          : now;
+                }
+              });
+            },
           ),
+          const SizedBox(height: 8),
+          if (!isOneOff)
+            DropdownButtonFormField<int>(
+              key: const ValueKey('weekday_dropdown'),
+              initialValue: weekday,
+              items: activeDays
+                  .map(
+                    (d) => DropdownMenuItem(
+                      value: d,
+                      child: Text(weekdayLabelL10n(d, l10n)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) =>
+                  setLocal(() => weekday = v ?? activeDays.first),
+              decoration: InputDecoration(labelText: l10n.weekday),
+            )
+          else
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.selectDate),
+              trailing: Text(
+                specificDate != null
+                    ? '${specificDate!.day}/${specificDate!.month}/${specificDate!.year}'
+                    : '—',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: specificDate ?? DateTime.now(),
+                  firstDate: schedule.startDate,
+                  lastDate: schedule.endDate,
+                );
+                if (picked != null) {
+                  setLocal(() => specificDate = picked);
+                }
+              },
+            ),
           DropdownButtonFormField<String>(
             initialValue: type,
             decoration: InputDecoration(labelText: l10n.type),
@@ -555,5 +675,30 @@ class DashboardShell extends StatelessWidget {
     final hour = (mins ~/ 60).clamp(0, 23);
     final minute = mins % 60;
     return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _ToolbarButton extends StatelessWidget {
+  const _ToolbarButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
   }
 }

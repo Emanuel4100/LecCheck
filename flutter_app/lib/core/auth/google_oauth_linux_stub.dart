@@ -6,3 +6,9 @@ Future<UserCredential?> signInWithGoogleLinuxDesktop() async {
     'Google sign-in for Linux is only available in IO builds.',
   );
 }
+
+Future<void> signOutLinuxDesktop() async {
+  throw UnsupportedError(
+    'Linux sign-out is only available in IO builds.',
+  );
+}

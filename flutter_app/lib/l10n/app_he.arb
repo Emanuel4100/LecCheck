@@ -177,7 +177,7 @@
   "linkTitleLabel": "כותרת",
   "linkUrlLabel": "כתובת",
   "addNamedLink": "הוסף קישור",
-  "meetingsSection": "מפגשים שבועיים",
+  "meetingsSection": "מפגשים",
   "meetingLocationLabel": "מיקום / חדר",
   "meetingLinksSection": "קישורים למפגש זה",
   "meetingLinkExampleHint": "לדוגמה: \"סיכום מפגש\" עם קישור למצגת או PDF.",
@@ -240,5 +240,15 @@
   "gridZoomIn": "הגדלת לוח",
   "gridZoomOut": "הקטנת לוח",
   "gridZoomReset": "איפוס זום",
-  "gridPinchZoomHint": "צבירה לזום • הקשה כפולה לאיפוס"
+  "gridPinchZoomHint": "צבירה לזום • הקשה כפולה לאיפוס",
+  "oneTimeMeeting": "חד-פעמי",
+  "weeklyRecurring": "שבועי",
+  "selectDate": "בחר תאריך",
+  "oneOffSessionTitle": "מפגש חד-פעמי {number}",
+  "@oneOffSessionTitle": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "notificationPermissionDenied": "הרשאת התראות נדחתה. הפעל אותה בהגדרות המערכת."
 }

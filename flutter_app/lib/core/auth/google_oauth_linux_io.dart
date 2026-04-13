@@ -5,20 +5,20 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:url_launcher/url_launcher.dart';
 
-/// Web client ID (same as `web/index.html` meta). For loopback OAuth, add a
-/// **Desktop** OAuth client in Google Cloud Console and pass
-/// `--dart-define=LINUX_GOOGLE_OAUTH_CLIENT_ID=...` if the Web client rejects
-/// dynamic `http://127.0.0.1:*` redirects.
-const String _kDefaultLinuxOAuthClientId =
-    '214900154341-blf4qu5100rt8snak2i8r50s3ult8vhq.apps.googleusercontent.com';
+import 'linux_auth_session.dart';
 
-String get _linuxOAuthClientId => const String.fromEnvironment(
-      'LINUX_GOOGLE_OAUTH_CLIENT_ID',
-      defaultValue: _kDefaultLinuxOAuthClientId,
-    );
+/// Desktop OAuth client credentials loaded at compile time via
+/// --dart-define-from-file=.env (see flutter_app/.env.example).
+const String _linuxOAuthClientId = String.fromEnvironment(
+  'LINUX_GOOGLE_OAUTH_CLIENT_ID',
+);
+const String _linuxOAuthClientSecret = String.fromEnvironment(
+  'LINUX_GOOGLE_OAUTH_CLIENT_SECRET',
+);
 
 String _base64UrlNoPad(List<int> bytes) {
   return base64Encode(bytes)
@@ -106,15 +106,17 @@ Future<UserCredential?> signInWithGoogleLinuxDesktop() async {
       throw StateError('Token response missing id_token.');
     }
 
-    final credential = GoogleAuthProvider.credential(
-      idToken: idToken,
-      accessToken: accessToken,
+    await LinuxAuthSession.instance.signInWithGoogleTokens(
+      googleIdToken: idToken,
+      googleAccessToken: accessToken,
     );
-    return FirebaseAuth.instance.signInWithCredential(credential);
+    return null;
   } finally {
     await server.close(force: true);
   }
 }
+
+Future<void> signOutLinuxDesktop() => LinuxAuthSession.instance.signOut();
 
 Future<void> _respondHtml(HttpRequest request, {required bool ok, required String message}) async {
   request.response.statusCode = ok ? 200 : 400;
@@ -145,6 +147,7 @@ Future<Map<String, dynamic>> _exchangeCode({
     final body = <String, String>{
       'code': code,
       'client_id': _linuxOAuthClientId,
+      'client_secret': _linuxOAuthClientSecret,
       'code_verifier': codeVerifier,
       'grant_type': 'authorization_code',
       'redirect_uri': redirectUri,

@@ -53,6 +53,7 @@ class Meeting {
     required this.end,
     required this.room,
     required this.type,
+    this.specificDate,
     List<NamedLink>? links,
   })  : id = id ?? _newMeetingId(),
         links = links ?? [];
@@ -67,7 +68,12 @@ class Meeting {
   String end;
   String room;
   String type;
+  /// When non-null this meeting appears only once on this date (one-off).
+  /// When null the meeting recurs weekly on [weekday].
+  DateTime? specificDate;
   final List<NamedLink> links;
+
+  bool get isOneOff => specificDate != null;
 }
 
 class Course {

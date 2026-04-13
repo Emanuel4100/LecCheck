@@ -106,10 +106,16 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/com.leccheck.app.desktop"
   DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications"
   COMPONENT Runtime)
 
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/app_icon.png"
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/128x128/apps"
-  RENAME com.leccheck.app.png
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/com.leccheck.app.metainfo.xml"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/metainfo"
   COMPONENT Runtime)
+
+foreach(ICON_SIZE 64 128 256 512)
+  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/com.leccheck.app-${ICON_SIZE}.png"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/${ICON_SIZE}x${ICON_SIZE}/apps"
+    RENAME com.leccheck.app.png
+    COMPONENT Runtime)
+endforeach()
 
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)

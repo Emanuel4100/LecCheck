@@ -1103,7 +1103,7 @@ abstract class AppLocalizations {
   /// No description provided for @meetingsSection.
   ///
   /// In en, this message translates to:
-  /// **'Weekly meetings'**
+  /// **'Meetings'**
   String get meetingsSection;
 
   /// No description provided for @meetingLocationLabel.
@@ -1411,6 +1411,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pinch to zoom • double-tap to reset'**
   String get gridPinchZoomHint;
+
+  /// No description provided for @oneTimeMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time'**
+  String get oneTimeMeeting;
+
+  /// No description provided for @weeklyRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get weeklyRecurring;
+
+  /// No description provided for @selectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date'**
+  String get selectDate;
+
+  /// No description provided for @oneOffSessionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time session {number}'**
+  String oneOffSessionTitle(int number);
+
+  /// No description provided for @notificationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission denied. Enable it in system settings.'**
+  String get notificationPermissionDenied;
 }
 
 class _AppLocalizationsDelegate

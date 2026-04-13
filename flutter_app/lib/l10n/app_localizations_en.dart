@@ -528,7 +528,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addNamedLink => 'Add link';
 
   @override
-  String get meetingsSection => 'Weekly meetings';
+  String get meetingsSection => 'Meetings';
 
   @override
   String get meetingLocationLabel => 'Location / room';
@@ -705,4 +705,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gridPinchZoomHint => 'Pinch to zoom • double-tap to reset';
+
+  @override
+  String get oneTimeMeeting => 'One-time';
+
+  @override
+  String get weeklyRecurring => 'Weekly';
+
+  @override
+  String get selectDate => 'Select date';
+
+  @override
+  String oneOffSessionTitle(int number) {
+    return 'One-time session $number';
+  }
+
+  @override
+  String get notificationPermissionDenied =>
+      'Notification permission denied. Enable it in system settings.';
 }

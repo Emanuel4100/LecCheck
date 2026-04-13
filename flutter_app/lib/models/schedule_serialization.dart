@@ -42,21 +42,34 @@ Map<String, dynamic> _meetingToJson(Meeting m) => {
       'end': m.end,
       'room': m.room,
       'type': m.type,
+      if (m.specificDate != null)
+        'specificDate': m.specificDate!.toIso8601String(),
       'links': m.links.map(_namedLinkToJson).toList(),
     };
 
-Meeting _meetingFromJson(Map<String, dynamic> m) => Meeting(
-      id: m['id'] as String?,
-      weekday: (m['weekday'] as num?)?.toInt() ?? 1,
-      start: m['start'] as String? ?? '',
-      end: m['end'] as String? ?? '',
-      room: m['room'] as String? ?? '',
-      type: m['type'] as String? ?? '',
-      links: (m['links'] as List<dynamic>?)
-              ?.map((e) => _namedLinkFromJson(Map<String, dynamic>.from(e as Map)))
-              .toList() ??
-          [],
-    );
+Meeting _meetingFromJson(Map<String, dynamic> m) {
+  final sdRaw = m['specificDate'] as String?;
+  DateTime? specificDate;
+  if (sdRaw != null) {
+    final parsed = DateTime.tryParse(sdRaw);
+    if (parsed != null) {
+      specificDate = DateTime(parsed.year, parsed.month, parsed.day);
+    }
+  }
+  return Meeting(
+    id: m['id'] as String?,
+    weekday: (m['weekday'] as num?)?.toInt() ?? 1,
+    start: m['start'] as String? ?? '',
+    end: m['end'] as String? ?? '',
+    room: m['room'] as String? ?? '',
+    type: m['type'] as String? ?? '',
+    specificDate: specificDate,
+    links: (m['links'] as List<dynamic>?)
+            ?.map((e) => _namedLinkFromJson(Map<String, dynamic>.from(e as Map)))
+            .toList() ??
+        [],
+  );
+}
 
 Map<String, dynamic> _lectureToJson(Lecture l) => {
       'courseId': l.courseId,

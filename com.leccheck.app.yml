@@ -1,0 +1,44 @@
+app-id: com.leccheck.app
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: leccheck
+
+finish-args:
+  # Wayland + X11
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # GPU acceleration
+  - --device=dri
+  # Network for Google OAuth and Firestore sync
+  - --share=network
+  # XDG portals (file picker, notifications)
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.portal.*
+  # Open browser for Google sign-in
+  - --talk-name=org.freedesktop.portal.OpenURI
+
+modules:
+  - name: leccheck
+    buildsystem: simple
+    build-commands:
+      # The pre-built bundle is expected at _bundle/ (see below).
+      - install -Dm755 _bundle/leccheck /app/bin/leccheck
+      - cp -r _bundle/data /app/bin/data
+      - cp -r _bundle/lib /app/bin/lib
+      # Desktop integration
+      - install -Dm644 _desktop/com.leccheck.app.desktop /app/share/applications/com.leccheck.app.desktop
+      - install -Dm644 _desktop/com.leccheck.app.metainfo.xml /app/share/metainfo/com.leccheck.app.metainfo.xml
+      # Icons
+      - install -Dm644 _icons/64.png /app/share/icons/hicolor/64x64/apps/com.leccheck.app.png
+      - install -Dm644 _icons/128.png /app/share/icons/hicolor/128x128/apps/com.leccheck.app.png
+      - install -Dm644 _icons/256.png /app/share/icons/hicolor/256x256/apps/com.leccheck.app.png
+      - install -Dm644 _icons/512.png /app/share/icons/hicolor/512x512/apps/com.leccheck.app.png
+    sources:
+      # Build the Flutter bundle outside flatpak-builder, then point here.
+      # Run: flutter build linux --release
+      # Then copy flutter_app/build/linux/x64/release/bundle/ -> _bundle/
+      - type: dir
+        path: .
+        # NOTE: For CI, replace with a tarball or git source of the pre-built bundle.

@@ -4,7 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// True when [DefaultFirebaseOptions.currentPlatform] exists (Linux/Fuchsia are not configured).
+import '../auth/linux_auth_bridge.dart';
+
+/// True when the native Firebase SDK plugin works on this platform.
+/// Linux desktop lacks native firebase_core support (Pigeon channels are
+/// unimplemented), so it uses REST-based auth and Firestore instead.
 bool get firebaseSupportedOnThisPlatform {
   if (kIsWeb) return true;
   switch (defaultTargetPlatform) {
@@ -14,14 +18,38 @@ bool get firebaseSupportedOnThisPlatform {
     case TargetPlatform.windows:
       return true;
     case TargetPlatform.linux:
-      return true;
     case TargetPlatform.fuchsia:
       return false;
   }
 }
 
+/// Whether this platform supports auth (Firebase SDK **or** Linux REST).
+bool get authSupportedOnThisPlatform {
+  if (firebaseSupportedOnThisPlatform) return true;
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) return true;
+  return false;
+}
+
 /// Whether [Firebase.initializeApp] completed for this process.
 bool get isFirebaseInitialized => Firebase.apps.isNotEmpty;
+
+/// Whether cloud sync is available (Firebase SDK initialised, or Linux
+/// REST auth is signed in).
+bool get isCloudAvailable {
+  if (isFirebaseInitialized) return true;
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+    return isLinuxAuthSignedIn;
+  }
+  return false;
+}
+
+/// The current user's UID across both Firebase SDK and Linux REST auth.
+String? get currentAuthUid {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+    return linuxAuthUid;
+  }
+  return firebaseCurrentUserIfReady?.uid;
+}
 
 /// Avoids touching [FirebaseAuth] before [Firebase.initializeApp] (e.g. widget tests).
 User? get firebaseCurrentUserIfReady =>

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show debugPrint, defaultTargetPlatform, kDebugMode, kIsWeb, TargetPlatform;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -94,6 +94,10 @@ Future<void> rescheduleMeetingNotifications(ScheduleRootState? root) async {
   for (final c in sch.courses) {
     for (final l in c.lectures) {
       if (count >= maxSched) return;
+      if (l.status == LectureStatus.canceled ||
+          l.status == LectureStatus.skipped) {
+        continue;
+      }
       final end = _lectureEndDateTime(l);
       var trigger = end.add(Duration(minutes: delayMin));
       if (!trigger.isAfter(now)) continue;
@@ -141,8 +145,10 @@ Future<void> rescheduleMeetingNotifications(ScheduleRootState? root) async {
           payload: payload,
         );
         count++;
-      } on Object {
-        // Skip problematic slots; others may still schedule.
+      } on Object catch (e, st) {
+        if (kDebugMode) {
+          debugPrint('Failed to schedule notification for ${l.courseName}: $e\n$st');
+        }
       }
     }
   }

@@ -61,17 +61,18 @@ GoogleSignIn get _googleSignIn =>
       clientId: _googleSignInClientIdOverride(),
     );
 
-/// Returns [UserCredential] on success, or null if the user closed the picker.
+/// Returns [UserCredential] on success, or null if the user closed the picker
+/// (or on Linux where REST-based auth stores credentials via [LinuxAuthSession]).
 Future<UserCredential?> signInWithGoogle() async {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+    await signInWithGoogleLinuxDesktop();
+    return null;
+  }
   if (Firebase.apps.isEmpty) {
     throw StateError('Firebase is not initialized on this platform.');
   }
   if (kIsWeb) {
-    // Web: avoid google_sign_in's People API dependency (403 if API disabled).
     return FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
-  }
-  if (defaultTargetPlatform == TargetPlatform.linux) {
-    return signInWithGoogleLinuxDesktop();
   }
 
   final account = await _googleSignIn.signIn();
@@ -86,7 +87,11 @@ Future<UserCredential?> signInWithGoogle() async {
 }
 
 Future<void> signOutEverywhere() async {
-  if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+    await signOutLinuxDesktop();
+    return;
+  }
+  if (!kIsWeb) {
     try {
       await _googleSignIn.signOut();
     } on Object {

@@ -177,7 +177,7 @@
   "linkTitleLabel": "Title",
   "linkUrlLabel": "URL",
   "addNamedLink": "Add link",
-  "meetingsSection": "Weekly meetings",
+  "meetingsSection": "Meetings",
   "meetingLocationLabel": "Location / room",
   "meetingLinksSection": "Links for this meeting",
   "meetingLinkExampleHint": "Example: \"Meeting summary\" with a link to slides or a PDF.",
@@ -240,5 +240,15 @@
   "gridZoomIn": "Zoom grid in",
   "gridZoomOut": "Zoom grid out",
   "gridZoomReset": "Reset grid zoom",
-  "gridPinchZoomHint": "Pinch to zoom • double-tap to reset"
+  "gridPinchZoomHint": "Pinch to zoom • double-tap to reset",
+  "oneTimeMeeting": "One-time",
+  "weeklyRecurring": "Weekly",
+  "selectDate": "Select date",
+  "oneOffSessionTitle": "One-time session {number}",
+  "@oneOffSessionTitle": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "notificationPermissionDenied": "Notification permission denied. Enable it in system settings."
 }

@@ -524,7 +524,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get addNamedLink => 'הוסף קישור';
 
   @override
-  String get meetingsSection => 'מפגשים שבועיים';
+  String get meetingsSection => 'מפגשים';
 
   @override
   String get meetingLocationLabel => 'מיקום / חדר';
@@ -700,4 +700,22 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get gridPinchZoomHint => 'צבירה לזום • הקשה כפולה לאיפוס';
+
+  @override
+  String get oneTimeMeeting => 'חד-פעמי';
+
+  @override
+  String get weeklyRecurring => 'שבועי';
+
+  @override
+  String get selectDate => 'בחר תאריך';
+
+  @override
+  String oneOffSessionTitle(int number) {
+    return 'מפגש חד-פעמי $number';
+  }
+
+  @override
+  String get notificationPermissionDenied =>
+      'הרשאת התראות נדחתה. הפעל אותה בהגדרות המערכת.';
 }

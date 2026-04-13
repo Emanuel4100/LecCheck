@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/auth/leccheck_auth.dart';
+import '../core/auth/linux_auth_bridge.dart';
 import '../core/config/feature_flags.dart';
 import '../core/config/test_zone.dart';
 import '../core/firebase/leccheck_firebase.dart';
@@ -15,6 +17,7 @@ import '../core/schedule/firestore_schedule_store.dart';
 import '../core/schedule/local_schedule_store.dart';
 import '../core/schedule/merge_prefs.dart';
 import '../core/notifications/meeting_notifications.dart';
+import '../features/dashboard/dashboard_utils.dart' show lectureEndDateTime;
 import '../core/schedule/schedule_backup.dart';
 import '../core/schedule/schedule_bootstrap.dart';
 import '../core/schedule/schedule_persistence.dart';
@@ -61,7 +64,9 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
   List<Lecture>? _allLecturesCache;
   int _weeklyWeekSyncToken = 0;
   int _lecturesSearchFocusToken = 0;
-  final SchedulePersistence _persistence = SchedulePersistence();
+  late final SchedulePersistence _persistence = SchedulePersistence(
+    firestore: _cloudStore(),
+  );
   bool _bootstrapping = true;
 
   @override
@@ -151,7 +156,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     if (schedule != null) {
       screen = schedule!.courses.isEmpty ? AppScreen.addCourse : AppScreen.dashboard;
       _invalidateLectureCache();
-    } else if (firebaseCurrentUserIfReady != null) {
+    } else if (currentAuthUid != null) {
       screen = AppScreen.onboarding;
     } else {
       screen = AppScreen.login;
@@ -177,7 +182,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
   void _persistSchedule() {
     final root = _scheduleRoot;
     if (root == null) return;
-    _persistence.persistDebounced(root, user: firebaseCurrentUserIfReady);
+    _persistence.persistDebounced(root);
     unawaited(rescheduleMeetingNotifications(root));
   }
 
@@ -219,7 +224,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
   }
 
   Future<void> _handleReset() async {
-    final uid = firebaseCurrentUserIfReady?.uid;
+    final uid = currentAuthUid;
     await _persistence.clearLocal();
     await _clearPendingLocalMerge();
     if (uid != null && FeatureFlags.enableFirebaseSync) {
@@ -262,13 +267,14 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     final prefs = await SharedPreferences.getInstance();
     final pendingMerge = prefs.getBool(kPendingLocalMergeKey) ?? false;
     final user = firebaseCurrentUserIfReady;
+    final uid = currentAuthUid;
 
     if (pendingMerge &&
-        user != null &&
+        uid != null &&
         FeatureFlags.enableFirebaseSync &&
-        isFirebaseInitialized) {
+        isCloudAvailable) {
       final local = LocalScheduleStore();
-      final cloud = FirestoreScheduleStore();
+      final cloud = _cloudStore();
       final localRaw = await local.loadRaw();
       final localRoot = scheduleRootFromJson(localRaw);
       if (localRoot != null) {
@@ -277,7 +283,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           savedAtMillis: DateTime.now().millisecondsSinceEpoch,
         );
         await local.saveRaw(map);
-        await cloud.pushRaw(user.uid, map);
+        await cloud.pushRaw(uid, map);
         await prefs.setBool(kPendingLocalMergeKey, false);
         if (!mounted) return;
         setState(() => _applyLoadedState((root: localRoot, user: user)));
@@ -287,14 +293,14 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
       await prefs.setBool(kPendingLocalMergeKey, false);
     }
 
-    if (user != null &&
+    if (uid != null &&
         FeatureFlags.enableFirebaseSync &&
-        isFirebaseInitialized &&
+        isCloudAvailable &&
         !pendingMerge) {
       final local = LocalScheduleStore();
-      final cloud = FirestoreScheduleStore();
+      final cloud = _cloudStore();
       final localRaw = await local.loadRaw();
-      final cloudRaw = await cloud.pullRaw(user.uid);
+      final cloudRaw = await cloud.pullRaw(uid);
       final localRoot = scheduleRootFromJson(localRaw);
       final cloudRoot = scheduleRootFromJson(cloudRaw);
       final localAt = scheduleBundleSavedAt(localRaw) ?? 0;
@@ -334,7 +340,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
             savedAtMillis: DateTime.now().millisecondsSinceEpoch,
           );
           await local.saveRaw(map);
-          await cloud.pushRaw(user.uid, map);
+          await cloud.pushRaw(uid, map);
           await prefs.setBool(kPendingLocalMergeKey, false);
           setState(() => _applyLoadedState((root: localRoot, user: user)));
           _scheduleSyncAppLocaleFromSchedule();
@@ -357,6 +363,15 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     _scheduleSyncAppLocaleFromSchedule();
   }
 
+  /// Returns a [FirestoreScheduleStore] appropriate for the current platform
+  /// (REST-based on Linux, SDK-based elsewhere).
+  static FirestoreScheduleStore _cloudStore() {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+      return createLinuxFirestoreStore();
+    }
+    return FirestoreScheduleStore();
+  }
+
   void _invalidateLectureCache() {
     _allLecturesCache = null;
   }
@@ -377,8 +392,9 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
   }
 
   double get attendancePercent {
+    final now = DateTime.now();
     final past = allLectures
-        .where((l) => l.date.isBefore(DateTime.now()))
+        .where((l) => lectureEndDateTime(l).isBefore(now))
         .toList();
     final attended = past
         .where(
@@ -562,6 +578,7 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
       end: m.end,
       room: m.room,
       type: m.type,
+      specificDate: m.specificDate,
       links: m.links
           .map((l) => NamedLink(title: l.title, url: l.url))
           .toList(),
@@ -1014,7 +1031,7 @@ class _LoginScreenState extends State<_LoginScreen>
   }
 
   Future<void> _onGooglePressed(BuildContext context) async {
-    if (!firebaseSupportedOnThisPlatform) {
+    if (!authSupportedOnThisPlatform) {
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.signInUnavailableThisPlatform)),
@@ -1026,7 +1043,11 @@ class _LoginScreenState extends State<_LoginScreen>
     try {
       final cred = await signInWithGoogle();
       if (!context.mounted) return;
-      if (cred == null) return;
+      // On Linux, cred is always null (REST auth), but if LinuxAuthSession
+      // signed in successfully we should proceed. On other platforms null
+      // means the user cancelled the picker.
+      final isLinux = !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+      if (cred == null && !(isLinux && isLinuxAuthSignedIn)) return;
       await widget.onGoogleSignedIn(context);
     } on Object catch (e) {
       if (context.mounted) {
@@ -1052,7 +1073,7 @@ class _LoginScreenState extends State<_LoginScreen>
     final cs = theme.colorScheme;
     final googleAvailable = FeatureFlags.enableGoogleSignIn &&
         googleSignInSupportedOnPlatform &&
-        firebaseSupportedOnThisPlatform;
+        authSupportedOnThisPlatform;
     final hPad = Adaptive.horizontalPadding(context) + 12;
     final isCompact = Adaptive.isCompactPhone(context);
 

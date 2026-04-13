@@ -42,8 +42,14 @@ FILE_VERSION="${RAW_VERSION//+/-}"
 mkdir -p "${OUT_DIR}"
 cd "${APP_DIR}"
 
+ENV_FILE="${APP_DIR}/.env"
+DART_DEFINE_ARGS=()
+if [[ -f "${ENV_FILE}" ]]; then
+  DART_DEFINE_ARGS+=("--dart-define-from-file=${ENV_FILE}")
+fi
+
 echo "Building Android APK (${RAW_VERSION})..."
-"${FLUTTER_BIN}" build apk --release
+"${FLUTTER_BIN}" build apk --release "${DART_DEFINE_ARGS[@]}"
 
 SRC="${APP_DIR}/build/app/outputs/flutter-apk/app-release.apk"
 if [[ ! -f "${SRC}" ]]; then

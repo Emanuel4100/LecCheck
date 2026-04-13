@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../core/platform/adaptive.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/motion_tokens.dart';
 import '../../l10n/app_localizations.dart';
@@ -209,93 +210,93 @@ class StatsTab extends StatelessWidget {
     );
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final desktop = Adaptive.isDesktop(context);
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: attendance),
-          duration: MotionTokens.slow,
-          curve: MotionTokens.standardCurve,
-          builder: (context, value, _) {
-            return Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Text(
-                      l10n.statsAttendanceHeroTitle,
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 120,
-                      width: 120,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            height: 120,
-                            width: 120,
-                            child: CircularProgressIndicator(
-                              value: value,
-                              strokeWidth: 10,
-                              backgroundColor: cs.surfaceContainerHighest,
-                              color: cs.primary,
-                            ),
-                          ),
-                          Text(
-                            '${(value * 100).round()}%',
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: cs.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.statsAttendanceHeroSubtitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
+    final heroCard = TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: attendance),
+      duration: MotionTokens.slow,
+      curve: MotionTokens.standardCurve,
+      builder: (context, value, _) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Text(
+                  l10n.statsAttendanceHeroTitle,
+                  style: theme.textTheme.titleMedium,
                 ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        _MetricRow(
-          icon: Icons.local_fire_department_outlined,
-          label: l10n.statsStreakLabel,
-          value: '${snap.learningStreakDays}',
-          color: Colors.deepOrange,
-        ),
-        _MetricRow(
-          icon: Icons.warning_amber_outlined,
-          label: l10n.statsOverduePendingLabel,
-          value: '${snap.overduePending}',
-          color: cs.error,
-        ),
-        _MetricRow(
-          icon: Icons.date_range,
-          label: l10n.statsThisWeekUpcomingLabel,
-          value: '${snap.thisCalendarWeekUpcoming}',
-          color: cs.secondary,
-        ),
-        _MetricRow(
-          icon: Icons.upcoming,
-          label: l10n.statsNext7DaysLabel,
-          value: '${snap.upcomingNext7Days}',
-          color: cs.tertiary,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.statsStatusMixTitle,
-          style: theme.textTheme.titleMedium,
-        ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 120,
+                  width: 120,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        height: 120,
+                        width: 120,
+                        child: CircularProgressIndicator(
+                          value: value,
+                          strokeWidth: 10,
+                          backgroundColor: cs.surfaceContainerHighest,
+                          color: cs.primary,
+                        ),
+                      ),
+                      Text(
+                        '${(value * 100).round()}%',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.statsAttendanceHeroSubtitle,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    final metricRows = [
+      _MetricRow(
+        icon: Icons.local_fire_department_outlined,
+        label: l10n.statsStreakLabel,
+        value: '${snap.learningStreakDays}',
+        color: Colors.deepOrange,
+      ),
+      _MetricRow(
+        icon: Icons.warning_amber_outlined,
+        label: l10n.statsOverduePendingLabel,
+        value: '${snap.overduePending}',
+        color: cs.error,
+      ),
+      _MetricRow(
+        icon: Icons.date_range,
+        label: l10n.statsThisWeekUpcomingLabel,
+        value: '${snap.thisCalendarWeekUpcoming}',
+        color: cs.secondary,
+      ),
+      _MetricRow(
+        icon: Icons.upcoming,
+        label: l10n.statsNext7DaysLabel,
+        value: '${snap.upcomingNext7Days}',
+        color: cs.tertiary,
+      ),
+    ];
+
+    final pieSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.statsStatusMixTitle, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         SizedBox(
           height: 220,
@@ -306,11 +307,13 @@ class StatsTab extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          l10n.statsPerCourseTitle,
-          style: theme.textTheme.titleMedium,
-        ),
+      ],
+    );
+
+    final barSection = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.statsPerCourseTitle, style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         SizedBox(
           height: 220,
@@ -338,6 +341,46 @@ class StatsTab extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+
+    if (desktop) {
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: heroCard),
+              const SizedBox(width: 12),
+              Expanded(child: Column(children: metricRows)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: pieSection),
+              const SizedBox(width: 12),
+              Expanded(child: barSection),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _SummaryTiles(snapshot: snap, l10n: l10n),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        heroCard,
+        const SizedBox(height: 8),
+        ...metricRows,
+        const SizedBox(height: 8),
+        pieSection,
+        const SizedBox(height: 16),
+        barSection,
         const SizedBox(height: 8),
         _SummaryTiles(snapshot: snap, l10n: l10n),
       ],

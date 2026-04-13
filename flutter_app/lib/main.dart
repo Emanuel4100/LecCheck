@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kDebugMode;
+    show TargetPlatform, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/leccheck_root.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
+import 'core/auth/linux_auth_bridge.dart';
 import 'core/firebase/leccheck_firebase.dart';
 import 'core/notifications/meeting_notifications.dart';
 
@@ -17,16 +18,31 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initMeetingNotifications();
   if (firebaseSupportedOnThisPlatform) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    if (kDebugMode) {
-      debugPrint('Firebase initialized (${Firebase.apps.length} app(s)).');
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      if (kDebugMode) {
+        debugPrint('Firebase initialized (${Firebase.apps.length} app(s)).');
+      }
+    } on Object catch (e) {
+      if (kDebugMode) {
+        debugPrint('Firebase init failed (continuing without): $e');
+      }
     }
-  } else if (kDebugMode) {
-    debugPrint(
-      'Firebase skipped: not configured for ${defaultTargetPlatform.name}.',
-    );
+  } else {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+      await restoreLinuxAuthSession();
+      if (kDebugMode) {
+        debugPrint(
+          'Linux REST auth restored: signed_in=$isLinuxAuthSignedIn',
+        );
+      }
+    } else if (kDebugMode) {
+      debugPrint(
+        'Firebase skipped: not configured for ${defaultTargetPlatform.name}.',
+      );
+    }
   }
   runApp(const LecCheckApp());
 }

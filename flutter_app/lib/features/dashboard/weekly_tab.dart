@@ -154,19 +154,22 @@ class _WeeklyTabState extends State<WeeklyTab> {
         const totalHours = 16;
         const timeAxisWidth = 56.0;
         const dayHeaderHeight = 32.0;
-        final minCellWidth = Adaptive.isDesktop(context)
-            ? 200.0
+        final desktop = Adaptive.isDesktop(context);
+        final minCellWidth = desktop
+            ? 240.0
             : Adaptive.isTablet(context)
                 ? 180.0
                 : 72.0;
+        final maxCellWidth = desktop ? double.infinity : 320.0;
         final availW =
             (constraints.maxWidth - timeAxisWidth).clamp(1.0, double.infinity);
         final baseCell =
-            (availW / columns).clamp(minCellWidth, 320.0) * _gridScale;
+            (availW / columns).clamp(minCellWidth, maxCellWidth) * _gridScale;
         final cellWidth = baseCell;
+        final maxHourH = desktop ? 80.0 : 64.0;
         final hourHeight = ((constraints.maxHeight - dayHeaderHeight) /
                     totalHours)
-                .clamp(32.0, 64.0) *
+                .clamp(32.0, maxHourH) *
             _gridScale;
         final gridHeight = hourHeight * totalHours;
         final compactTile = cellWidth < 120;
@@ -342,14 +345,14 @@ class _WeeklyTabState extends State<WeeklyTab> {
                                             hourHeight;
                                     final height = ((endM - startM) / 60.0) *
                                         hourHeight;
+                                    final maxTileH = desktop
+                                        ? gridHeight - top.clamp(0, gridHeight - 30)
+                                        : (hourHeight * 6).clamp(48.0, 200.0);
                                     return Positioned(
                                       left: compactTile ? 2 : 6,
                                       right: compactTile ? 2 : 6,
                                       top: top.clamp(0, gridHeight - 24),
-                                      height: height.clamp(
-                                        30,
-                                        (hourHeight * 6).clamp(48, 200),
-                                      ),
+                                      height: height.clamp(30, maxTileH),
                                       child: GestureDetector(
                                         onTap: () =>
                                             _onGridTap(context, lecture),

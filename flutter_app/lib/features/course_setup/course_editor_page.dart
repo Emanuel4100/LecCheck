@@ -62,6 +62,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
             end: m.end,
             room: m.room,
             type: m.type,
+            specificDate: m.specificDate,
             links: m.links
                 .map((l) => NamedLink(title: l.title, url: l.url))
                 .toList(),
@@ -182,6 +183,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
 
   void _addMeeting(AppLocalizations l10n) {
     final orderedDays = orderedWeekdaysForSchedule(widget.schedule);
+    if (orderedDays.isEmpty) return;
     final startTimes = _timeOptions();
     final meetingTypes = [
       l10n.lectureType,
@@ -209,6 +211,14 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
       );
       return;
     }
+    for (final m in _meetings) {
+      if (_toMinutes(m.end) <= _toMinutes(m.start)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.endAfterStartError)),
+        );
+        return;
+      }
+    }
     final payload = CourseEditorPayload(
       name: _nameCtrl.text.trim(),
       lecturer: _lecturerCtrl.text.trim(),
@@ -230,6 +240,7 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
             end: m.end,
             room: m.room,
             type: m.type,
+            specificDate: m.specificDate,
             links: m.links
                 .where(
                   (l) => l.title.trim().isNotEmpty || l.url.trim().isNotEmpty,
@@ -503,7 +514,9 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  l10n.weeklySessionTitle(index + 1),
+                                  m.isOneOff
+                                      ? l10n.oneOffSessionTitle(index + 1)
+                                      : l10n.weeklySessionTitle(index + 1),
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleSmall,
@@ -517,6 +530,39 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 4),
+                          SegmentedButton<bool>(
+                            segments: [
+                              ButtonSegment(
+                                value: false,
+                                label: Text(l10n.weeklyRecurring),
+                              ),
+                              ButtonSegment(
+                                value: true,
+                                label: Text(l10n.oneTimeMeeting),
+                              ),
+                            ],
+                            selected: {m.isOneOff},
+                            onSelectionChanged: (v) {
+                              if (v.isEmpty) return;
+                              setState(() {
+                                if (v.first) {
+                                  if (m.specificDate == null) {
+                                    final now = DateTime.now();
+                                    final sch = widget.schedule;
+                                    m.specificDate = now.isBefore(sch.startDate)
+                                        ? sch.startDate
+                                        : now.isAfter(sch.endDate)
+                                            ? sch.endDate
+                                            : now;
+                                  }
+                                } else {
+                                  m.specificDate = null;
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 8),
                           DropdownButtonFormField<String>(
                             key: ValueKey('${m.id}_type'),
                             initialValue: meetingTypes.contains(m.type)
@@ -537,25 +583,51 @@ class _CourseEditorPageState extends State<CourseEditorPage> {
                             onChanged: (v) => setState(() => m.type = v!),
                           ),
                           const SizedBox(height: 8),
-                          DropdownButtonFormField<int>(
-                            key: ValueKey('${m.id}_day'),
-                            initialValue: orderedDays.contains(m.weekday)
-                                ? m.weekday
-                                : orderedDays.first,
-                            decoration: InputDecoration(
-                              labelText: l10n.weekday,
-                              border: const OutlineInputBorder(),
+                          if (m.isOneOff)
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.selectDate),
+                              trailing: Text(
+                                m.specificDate != null
+                                    ? '${m.specificDate!.day}/${m.specificDate!.month}/${m.specificDate!.year}'
+                                    : '—',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: m.specificDate ?? DateTime.now(),
+                                  firstDate: widget.schedule.startDate,
+                                  lastDate: widget.schedule.endDate,
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    m.specificDate = picked;
+                                    m.weekday = picked.weekday;
+                                  });
+                                }
+                              },
+                            )
+                          else
+                            DropdownButtonFormField<int>(
+                              key: ValueKey('${m.id}_day'),
+                              initialValue: orderedDays.contains(m.weekday)
+                                  ? m.weekday
+                                  : orderedDays.first,
+                              decoration: InputDecoration(
+                                labelText: l10n.weekday,
+                                border: const OutlineInputBorder(),
+                              ),
+                              items: orderedDays
+                                  .map(
+                                    (d) => DropdownMenuItem(
+                                      value: d,
+                                      child: Text(weekdayLabelL10n(d, l10n)),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() => m.weekday = v!),
                             ),
-                            items: orderedDays
-                                .map(
-                                  (d) => DropdownMenuItem(
-                                    value: d,
-                                    child: Text(weekdayLabelL10n(d, l10n)),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) => setState(() => m.weekday = v!),
-                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [

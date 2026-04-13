@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.leccheck.app</id>
+
+  <name>LecCheck</name>
+  <summary>Track lectures, attendance, and your semester schedule</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      LecCheck helps university students manage their semester schedule,
+      track lecture attendance, and stay on top of coursework. Features include
+      a weekly timetable grid, per-lecture status tracking (attended, missed,
+      watched recording), recurring and one-off meetings, push-notification
+      reminders, and optional Google account cloud sync.
+    </p>
+    <p>
+      Available in English and Hebrew with right-to-left support.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">com.leccheck.app.desktop</launchable>
+
+  <url type="homepage">https://github.com/emanuelk02/Lecture_tracker</url>
+  <url type="bugtracker">https://github.com/emanuelk02/Lecture_tracker/issues</url>
+
+  <provides>
+    <binary>leccheck</binary>
+  </provides>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#2A7BCC</color>
+    <color type="primary" scheme_preference="dark">#1A4F8A</color>
+  </branding>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.7.2" date="2026-04-13">
+      <description>
+        <p>Linux desktop Google sign-in support, one-off meetings, bug fixes.</p>
+      </description>
+    </release>
+  </releases>
+
+  <categories>
+    <category>Education</category>
+    <category>Office</category>
+  </categories>
+
+  <keywords>
+    <keyword>lecture</keyword>
+    <keyword>schedule</keyword>
+    <keyword>university</keyword>
+    <keyword>attendance</keyword>
+    <keyword>semester</keyword>
+    <keyword>calendar</keyword>
+  </keywords>
+
+  <screenshots>
+    <!-- Add screenshots before Flathub submission:
+    <screenshot type="default">
+      <image>https://example.com/screenshots/weekly.png</image>
+      <caption>Weekly timetable view</caption>
+    </screenshot>
+    -->
+  </screenshots>
+</component>

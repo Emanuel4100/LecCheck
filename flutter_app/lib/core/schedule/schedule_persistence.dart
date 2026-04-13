@@ -26,15 +26,17 @@ class SchedulePersistence {
     _debounce?.cancel();
   }
 
+  /// Persist immediately. [user] is from FirebaseAuth (null on Linux).
+  /// On Linux, [linuxUid] is read from the REST auth session automatically.
   Future<void> persistNow(ScheduleRootState root, {User? user}) async {
     _debounce?.cancel();
-    await _write(root, user?.uid);
+    await _write(root, user?.uid ?? currentAuthUid);
   }
 
   void persistDebounced(ScheduleRootState root, {User? user}) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 450), () {
-      unawaited(_write(root, user?.uid));
+      unawaited(_write(root, user?.uid ?? currentAuthUid));
     });
   }
 
@@ -46,7 +48,7 @@ class SchedulePersistence {
     await local.saveRaw(map);
     if (uid != null &&
         FeatureFlags.enableFirebaseSync &&
-        isFirebaseInitialized) {
+        isCloudAvailable) {
       try {
         await firestore.pushRaw(uid, map);
       } on Object {
@@ -58,7 +60,7 @@ class SchedulePersistence {
   Future<void> clearLocal() => local.clear();
 
   Future<void> clearCloud(String uid) async {
-    if (!isFirebaseInitialized) return;
+    if (!isCloudAvailable) return;
     await firestore.delete(uid);
   }
 }

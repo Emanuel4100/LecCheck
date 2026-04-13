@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 class Adaptive {
   const Adaptive._();
 
+  static bool get isLinuxDesktop =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+
   static double width(BuildContext context) => MediaQuery.of(context).size.width;
 
   static bool isWebLike(BuildContext context) {
@@ -11,11 +14,14 @@ class Adaptive {
   }
 
   static bool isTablet(BuildContext context) {
-    return width(context) >= 700 && width(context) < 1100;
+    final w = width(context);
+    final desktopThreshold = isLinuxDesktop ? 800.0 : 1100.0;
+    return w >= 700 && w < desktopThreshold;
   }
 
   static bool isDesktop(BuildContext context) {
-    return width(context) >= 1100;
+    final threshold = isLinuxDesktop ? 800.0 : 1100.0;
+    return width(context) >= threshold;
   }
 
   static double maxBodyWidth(BuildContext context) {

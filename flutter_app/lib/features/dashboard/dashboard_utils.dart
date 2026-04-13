@@ -18,8 +18,21 @@ Meeting? meetingForLecture(Course course, Lecture lecture) {
       if (m.id == lecture.meetingId) return m;
     }
   }
+  // Fallback: prefer one-off with matching date, then recurring by weekday.
   for (final m in course.meetings) {
-    if (m.weekday == lecture.date.weekday &&
+    if (m.isOneOff &&
+        m.specificDate != null &&
+        m.specificDate!.year == lecture.date.year &&
+        m.specificDate!.month == lecture.date.month &&
+        m.specificDate!.day == lecture.date.day &&
+        m.start == lecture.start &&
+        m.end == lecture.end) {
+      return m;
+    }
+  }
+  for (final m in course.meetings) {
+    if (!m.isOneOff &&
+        m.weekday == lecture.date.weekday &&
         m.start == lecture.start &&
         m.end == lecture.end) {
       return m;
@@ -270,6 +283,13 @@ String formatLectureDateMedium(
   return DateFormat.yMMMd(locale).format(date);
 }
 
+bool _sameLecture(Lecture a, Lecture b) =>
+    a.courseId == b.courseId &&
+    a.date == b.date &&
+    a.start == b.start &&
+    a.end == b.end &&
+    a.meetingId == b.meetingId;
+
 int effectiveMeetingNumber(Lecture lecture, List<Lecture> allLectures) {
   final sameSeries = allLectures
       .where(
@@ -287,7 +307,7 @@ int effectiveMeetingNumber(Lecture lecture, List<Lecture> allLectures) {
         item.status != LectureStatus.skipped) {
       counter += 1;
     }
-    if (identical(item, lecture)) {
+    if (_sameLecture(item, lecture)) {
       return (item.status == LectureStatus.canceled ||
               item.status == LectureStatus.skipped)
           ? counter + 1
