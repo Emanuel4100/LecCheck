@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/linkified_text.dart';
+import '../../core/util/open_url.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
 import 'dashboard_utils.dart';
@@ -37,6 +38,7 @@ class LectureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = MediaQuery.sizeOf(context).width;
     final useMenu = w < 400;
+    final recordingUrl = (lecture.recordingLink ?? '').trim();
 
     final titleText =
         '${localizeCourseName(lecture.courseName, l10n)} • ${lecture.type}${showMeetingNumber ? ' • #${effectiveMeetingNumber(lecture, allLectures)}' : ''}';
@@ -114,6 +116,32 @@ class LectureCard extends StatelessWidget {
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                      if (recordingUrl.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          leading: Icon(
+                            Icons.ondemand_video_outlined,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: Text(
+                            l10n.recordingLink,
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                          subtitle: LinkifiedText(
+                            text: recordingUrl,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          trailing: const Icon(Icons.open_in_new, size: 20),
+                          onTap: () =>
+                              tryLaunchLectureUrl(context, recordingUrl),
                         ),
                       ],
                     ],

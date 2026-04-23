@@ -15,6 +15,118 @@ enum LectureDetailOutcome {
   oneOffRescheduled,
 }
 
+/// Recording URL: add-link entry, URL field, link preview + open (like meeting links).
+class _RecordingLinkEditor extends StatefulWidget {
+  const _RecordingLinkEditor({
+    required this.l10n,
+    required this.controller,
+  });
+
+  final AppLocalizations l10n;
+  final TextEditingController controller;
+
+  @override
+  State<_RecordingLinkEditor> createState() => _RecordingLinkEditorState();
+}
+
+class _RecordingLinkEditorState extends State<_RecordingLinkEditor> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.controller.text.trim().isNotEmpty;
+    widget.controller.addListener(_onControllerText);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RecordingLinkEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerText);
+      widget.controller.addListener(_onControllerText);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerText);
+    super.dispose();
+  }
+
+  void _onControllerText() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    final ctrl = widget.controller;
+    final url = ctrl.text.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          l10n.recordingLink,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.recordingLinkEditorHint,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 8),
+        if (!_expanded)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _expanded = true),
+            icon: const Icon(Icons.add_link, size: 18),
+            label: Text(l10n.addRecordingLink),
+          )
+        else ...[
+          TextField(
+            controller: ctrl,
+            decoration: InputDecoration(
+              labelText: l10n.linkUrlLabel,
+              hintText: 'https://',
+            ),
+            maxLines: 3,
+            minLines: 1,
+          ),
+          if (url.isNotEmpty)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                l10n.recordingLink,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              subtitle: LinkifiedText(
+                text: url,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              trailing: const Icon(Icons.open_in_new, size: 20),
+              onTap: () => tryLaunchLectureUrl(context, url),
+            ),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: () {
+                ctrl.clear();
+                setState(() => _expanded = false);
+              },
+              icon: const Icon(Icons.delete_outline, size: 20),
+              label: Text(l10n.removeRecordingLink),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 List<Widget> buildLectureResourceEditorSection(
   BuildContext context,
   void Function(void Function()) setLocal,
@@ -492,11 +604,11 @@ Future<LectureDetailOutcome?> showLectureDetailEditor(
     (LectureStatus.canceled, l10n.markCanceled),
   ];
   var selected = lecture.status;
-  var hasRecording = (lecture.recordingLink ?? '').trim().isNotEmpty;
   final ctrl = TextEditingController(text: lecture.recordingLink ?? '');
   final notesCtrl = TextEditingController(text: lecture.notes);
   final useDialog = Adaptive.isDesktop(context) || Adaptive.isWebLike(context);
   final LectureDetailOutcome? outcome;
+  try {
   if (useDialog) {
     outcome = await showDialog<LectureDetailOutcome?>(
           context: context,
@@ -584,20 +696,7 @@ Future<LectureDetailOutcome?> showLectureDetailEditor(
                         maxLines: 6,
                       ),
                       LinkifiedNotesPreview(controller: notesCtrl),
-                      const SizedBox(height: 8),
-                      CheckboxListTile(
-                        value: hasRecording,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (v) => setLocal(() => hasRecording = v!),
-                        title: Text(l10n.addRecordingLink),
-                      ),
-                      if (hasRecording)
-                        TextField(
-                          controller: ctrl,
-                          decoration: InputDecoration(
-                            labelText: l10n.recordingLink,
-                          ),
-                        ),
+                      _RecordingLinkEditor(l10n: l10n, controller: ctrl),
                       if (course != null)
                         ...buildLectureResourceEditorSection(
                           context,
@@ -714,19 +813,7 @@ Future<LectureDetailOutcome?> showLectureDetailEditor(
                         maxLines: 6,
                       ),
                       LinkifiedNotesPreview(controller: notesCtrl),
-                      CheckboxListTile(
-                        value: hasRecording,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (v) => setLocal(() => hasRecording = v!),
-                        title: Text(l10n.addRecordingLink),
-                      ),
-                      if (hasRecording)
-                        TextField(
-                          controller: ctrl,
-                          decoration: InputDecoration(
-                            labelText: l10n.recordingLink,
-                          ),
-                        ),
+                      _RecordingLinkEditor(l10n: l10n, controller: ctrl),
                       if (course != null)
                         ...buildLectureResourceEditorSection(
                           context,
@@ -763,20 +850,25 @@ Future<LectureDetailOutcome?> showLectureDetailEditor(
           ),
         );
   }
-  if (outcome == LectureDetailOutcome.saved && context.mounted) {
-    lecture.recordingLink = hasRecording ? ctrl.text.trim() : null;
-    lecture.notes = notesCtrl.text.trim();
-    onStatus(lecture, selected);
-    if (course != null && meeting != null) {
-      onMeetingLinksSaved(
-        course,
-        meeting,
-        draftMeetingLinks
-            .map((l) => NamedLink(title: l.title.trim(), url: l.url.trim()))
-            .where((l) => l.title.isNotEmpty || l.url.isNotEmpty)
-            .toList(),
-      );
+    if (outcome == LectureDetailOutcome.saved && context.mounted) {
+      lecture.recordingLink =
+          ctrl.text.trim().isEmpty ? null : ctrl.text.trim();
+      lecture.notes = notesCtrl.text.trim();
+      onStatus(lecture, selected);
+      if (course != null && meeting != null) {
+        onMeetingLinksSaved(
+          course,
+          meeting,
+          draftMeetingLinks
+              .map((l) => NamedLink(title: l.title.trim(), url: l.url.trim()))
+              .where((l) => l.title.isNotEmpty || l.url.isNotEmpty)
+              .toList(),
+        );
+      }
     }
+    return outcome;
+  } finally {
+    ctrl.dispose();
+    notesCtrl.dispose();
   }
-  return outcome;
 }

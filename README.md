@@ -19,8 +19,8 @@ Linux uses a **Web OAuth client** with a local redirect server on a **fixed port
 
 1. Copy `flutter_app/.env.example` to `flutter_app/.env`, set `LINUX_GOOGLE_OAUTH_CLIENT_ID` and `LINUX_GOOGLE_OAUTH_CLIENT_SECRET`, and **never commit** `.env` (it is gitignored).
 2. Pass defines on every run and release build, for example:
-   - `flutter run -d linux --dart-define-from-file=flutter_app/.env`
-   - `flutter build linux --dart-define-from-file=flutter_app/.env`
+  - `flutter run -d linux --dart-define-from-file=flutter_app/.env`
+  - `flutter build linux --dart-define-from-file=flutter_app/.env`
 3. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → your **OAuth 2.0 Web client** → **Authorized redirect URIs**, add exactly: `http://127.0.0.1:8765/` (same host, path, and port as the app).
 
 If the app is built **without** those defines, Google may report errors users describe as **“missing client”**; the app shows a dialog with the correct `flutter run` / `flutter build` flags. Only one app instance should use sign-in at a time; if port `8765` is busy, close the other instance or free the port.
@@ -50,7 +50,7 @@ CI: push a `v*` tag → `.github/workflows/release.yml` can publish a release.
 ## Repo layout
 
 - `**flutter_app/`** — app (`lib/main.dart`, `lib/app/leccheck_root.dart`, features under `lib/features/`)
-- `**flutter_app/.env.example**` — copy to `.env` for Linux OAuth (never commit secrets)
+- `**flutter_app/.env.example`** — copy to `.env` for Linux OAuth (never commit secrets)
 - `**scripts/**` — build / install helpers
 
 ---

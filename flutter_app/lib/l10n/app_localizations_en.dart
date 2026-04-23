@@ -174,6 +174,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recordingLink => 'Recording link';
 
   @override
+  String get recordingLinkEditorHint =>
+      'Paste a URL, then tap Open below. After Save it also appears on the lecture card.';
+
+  @override
+  String get removeRecordingLink => 'Remove recording link';
+
+  @override
   String get semesterWeekLabel => 'Week';
 
   @override

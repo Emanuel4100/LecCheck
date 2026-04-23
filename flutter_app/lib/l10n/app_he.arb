@@ -62,6 +62,8 @@
   "statusLabel": "סטטוס",
   "addRecordingLink": "הוסף קישור להקלטה",
   "recordingLink": "קישור להקלטה",
+  "recordingLinkEditorHint": "הדבק כתובת, ואז הקש על פתיחה למטה. אחרי שמירה הקישור יופיע גם בכרטיס ההרצאה.",
+  "removeRecordingLink": "הסרת קישור להקלטה",
   "semesterWeekLabel": "שבוע",
   "logout": "התנתקות",
   "login": "התחברות",

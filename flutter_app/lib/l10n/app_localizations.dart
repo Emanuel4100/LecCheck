@@ -410,6 +410,18 @@ abstract class AppLocalizations {
   /// **'Recording link'**
   String get recordingLink;
 
+  /// No description provided for @recordingLinkEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste a URL, then tap Open below. After Save it also appears on the lecture card.'**
+  String get recordingLinkEditorHint;
+
+  /// No description provided for @removeRecordingLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove recording link'**
+  String get removeRecordingLink;
+
   /// No description provided for @semesterWeekLabel.
   ///
   /// In en, this message translates to:

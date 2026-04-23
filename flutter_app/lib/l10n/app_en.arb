@@ -62,6 +62,8 @@
   "statusLabel": "Status",
   "addRecordingLink": "Add recording link",
   "recordingLink": "Recording link",
+  "recordingLinkEditorHint": "Paste a URL, then tap Open below. After Save it also appears on the lecture card.",
+  "removeRecordingLink": "Remove recording link",
   "semesterWeekLabel": "Week",
   "logout": "Logout",
   "login": "Login",

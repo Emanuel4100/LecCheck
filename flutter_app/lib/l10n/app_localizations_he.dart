@@ -175,6 +175,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get recordingLink => 'קישור להקלטה';
 
   @override
+  String get recordingLinkEditorHint =>
+      'הדבק כתובת, ואז הקש על פתיחה למטה. אחרי שמירה הקישור יופיע גם בכרטיס ההרצאה.';
+
+  @override
+  String get removeRecordingLink => 'הסרת קישור להקלטה';
+
+  @override
   String get semesterWeekLabel => 'שבוע';
 
   @override
