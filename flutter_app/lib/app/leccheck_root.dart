@@ -752,6 +752,34 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
     _persistSchedule();
   }
 
+  void _removeOneOffMeeting(Course course, Meeting meeting) {
+    final sc = schedule;
+    if (sc == null) return;
+    course.meetings.removeWhere((m) => m.id == meeting.id);
+    _rebuildAndApplyNoClass(course);
+    setState(_invalidateLectureCache);
+    _persistSchedule();
+  }
+
+  void _rescheduleOneOffMeeting(
+    Course course,
+    Meeting meeting,
+    DateTime date,
+    String start,
+    String end,
+  ) {
+    final sc = schedule;
+    if (sc == null) return;
+    final d = DateTime(date.year, date.month, date.day);
+    meeting.specificDate = d;
+    meeting.weekday = d.weekday;
+    meeting.start = start;
+    meeting.end = end;
+    _rebuildAndApplyNoClass(course);
+    setState(_invalidateLectureCache);
+    _persistSchedule();
+  }
+
   void _pushCourseEditor(BuildContext context, {Course? existing}) {
     final sc = schedule;
     if (sc == null) return;
@@ -955,6 +983,8 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
         _persistSchedule();
       },
       onMeetingLinksSaved: _updateMeetingLinks,
+      onRemoveOneOffMeeting: _removeOneOffMeeting,
+      onRescheduleOneOffMeeting: _rescheduleOneOffMeeting,
     );
     if (mounted) setState(_invalidateLectureCache);
   }
@@ -1102,11 +1132,13 @@ class _LecCheckRootState extends State<LecCheckRoot> with WidgetsBindingObserver
           syncStatus: _persistence.syncStatus,
           onClearCache: () async {
             await _persistence.clearLocal();
-            if (mounted) setState(() {
-              _scheduleRoot = null;
-              schedule = null;
-              _invalidateLectureCache();
-            });
+            if (mounted) {
+              setState(() {
+                _scheduleRoot = null;
+                schedule = null;
+                _invalidateLectureCache();
+              });
+            }
           },
           onRebootstrap: () {
             setState(() => _bootstrapping = true);
@@ -1173,11 +1205,41 @@ class _LoginScreenState extends State<_LoginScreen>
       final isLinux = !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
       if (cred == null && !(isLinux && isLinuxAuthSignedIn)) return;
       await widget.onGoogleSignedIn(context);
+    } on LinuxOAuthNotConfigured {
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.linuxOAuthMissingClientTitle),
+          content: SingleChildScrollView(
+            child: Text(l10n.linuxOAuthMissingClientBody),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+            ),
+          ],
+        ),
+      );
+    } on TimeoutException catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.linuxOAuthTimedOut),
+            duration: const Duration(seconds: 12),
+          ),
+        );
+      }
     } on Object catch (e) {
       if (context.mounted) {
-        final msg = isGoogleSignInAndroidDeveloperError(e)
-            ? l10n.signInAndroidConfigHint
-            : l10n.signInFailed('$e');
+        final msg = e is StateError &&
+                e.toString().contains('LINUX_OAUTH_PORT_') &&
+                e.toString().contains('_IN_USE')
+            ? l10n.linuxOAuthRedirectPortInUse(8765)
+            : isGoogleSignInAndroidDeveloperError(e)
+                ? l10n.signInAndroidConfigHint
+                : l10n.signInFailed('$e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),

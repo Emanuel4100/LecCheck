@@ -262,6 +262,17 @@ String formatTimeRange(
   return '${fmt.format(_parseTime(start))} - ${fmt.format(_parseTime(end))}';
 }
 
+/// Single `HH:mm` slot label (e.g. time dropdowns).
+String formatTimeSlotLabel(
+  String time,
+  AppLocalizations l10n, {
+  required bool use24HourTime,
+}) {
+  final locale = l10n.localeName;
+  final fmt = use24HourTime ? DateFormat.Hm(locale) : DateFormat.jm(locale);
+  return fmt.format(_parseTime(time));
+}
+
 /// Single clock hour label (e.g. weekly grid time axis).
 String formatHourLabel(
   int hour,
@@ -315,4 +326,21 @@ int effectiveMeetingNumber(Lecture lecture, List<Lecture> allLectures) {
     }
   }
   return 1;
+}
+
+/// 08:00 … 23:30 — same grid as course editor / quick-add.
+List<String> defaultLectureTimeOptions() {
+  final options = <String>[];
+  for (var h = 8; h <= 23; h++) {
+    options.add('${h.toString().padLeft(2, '0')}:00');
+    if (h < 23) {
+      options.add('${h.toString().padLeft(2, '0')}:30');
+    }
+  }
+  return options;
+}
+
+int timeStringToMinutes(String value) {
+  final parts = value.split(':');
+  return int.parse(parts[0]) * 60 + int.parse(parts[1]);
 }

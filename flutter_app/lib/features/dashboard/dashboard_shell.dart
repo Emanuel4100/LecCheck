@@ -205,6 +205,7 @@ class DashboardShell extends StatelessWidget {
                         weekSyncToken: weeklyWeekSyncToken,
                         onStatus: onStatus,
                         onMeetingLinksSaved: onMeetingLinksSaved,
+                        onLectureDetail: onLectureDetail,
                         onMarkNoClassDay: onMarkNoClassDay,
                         onClearNoClassDay: onClearNoClassDay,
                         l10n: l10n,
@@ -360,31 +361,34 @@ class DashboardShell extends StatelessWidget {
             ),
         ];
 
-    final String? pick = useCenteredMenu
-        ? await showDialog<String>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.addActionsTitle),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: menuBody(ctx),
-                  ),
-                ),
-              ),
-            ),
-          )
-        : await showModalBottomSheet<String>(
-            context: context,
-            builder: (ctx) => SafeArea(
+    final String? pick;
+    if (useCenteredMenu) {
+      pick = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.addActionsTitle),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: menuBody(ctx),
               ),
             ),
-          );
+          ),
+        ),
+      );
+    } else {
+      pick = await showModalBottomSheet<String>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: menuBody(ctx),
+          ),
+        ),
+      );
+    }
     if (!context.mounted) return;
 
     if (pick == 'week') {

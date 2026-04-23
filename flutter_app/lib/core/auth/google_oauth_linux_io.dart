@@ -20,6 +20,13 @@ const String _linuxOAuthClientSecret = String.fromEnvironment(
   'LINUX_GOOGLE_OAUTH_CLIENT_SECRET',
 );
 
+/// Fixed loopback port; add `http://127.0.0.1:8765/` to the OAuth web client’s
+/// authorized redirect URIs in Google Cloud Console.
+const int linuxGoogleOAuthLoopbackPort = 8765;
+
+bool get linuxGoogleOAuthDesktopCredentialsConfigured =>
+    _linuxOAuthClientId.isNotEmpty && _linuxOAuthClientSecret.isNotEmpty;
+
 String _base64UrlNoPad(List<int> bytes) {
   return base64Encode(bytes)
       .replaceAll('+', '-')
@@ -43,7 +50,17 @@ Future<UserCredential?> signInWithGoogleLinuxDesktop() async {
   final codeChallenge = _base64UrlNoPad(challengeBytes);
   final state = _randomVerifier();
 
-  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  HttpServer server;
+  try {
+    server = await HttpServer.bind(
+      InternetAddress.loopbackIPv4,
+      linuxGoogleOAuthLoopbackPort,
+    );
+  } on SocketException catch (e) {
+    throw StateError(
+      'LINUX_OAUTH_PORT_${linuxGoogleOAuthLoopbackPort}_IN_USE: $e',
+    );
+  }
   final port = server.port;
   final redirectUri = 'http://127.0.0.1:$port/';
 
@@ -73,7 +90,7 @@ Future<UserCredential?> signInWithGoogleLinuxDesktop() async {
     final request = await server.first
         .timeout(
           const Duration(minutes: 5),
-          onTimeout: () => throw TimeoutException('Google sign-in timed out.'),
+          onTimeout: () => throw TimeoutException('LINUX_OAUTH_TIMEOUT'),
         );
 
     final uri = request.uri;

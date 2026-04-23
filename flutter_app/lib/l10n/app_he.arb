@@ -278,5 +278,21 @@
   "devClearCacheConfirm": "?פעולה זו תמחק את כל הנתונים המקומיים. האם אתה בטוח",
   "devClearCacheDone": ".המטמון המקומי נוקה",
   "devDisableDevMode": "כבה מצב מפתח",
-  "devRebootstrap": "אתחול מחדש"
+  "devRebootstrap": "אתחול מחדש",
+  "removeOneOffSession": "הסרת מפגש חד-פעמי",
+  "removeOneOffSessionConfirm": "להסיר את המפגש החד-פעמי מהקורס? המקום ייעלם מהלוח.",
+  "rescheduleOneOffSession": "שינוי תאריך ושעה",
+  "rescheduleOneOffDialogTitle": "תזמון מחדש למפגש חד-פעמי",
+  "rescheduleOneOffApply": "החלה",
+  "oneOffOutsideSemesterWarning": "התאריך מחוץ לסמסטר הנוכחי. הארך את תאריכי הסמסטר או בחר יום בתוך התקופה.",
+  "linuxOAuthMissingClientTitle": "התחברות Google לא הוגדרה",
+  "linuxOAuthMissingClientBody": "בלינוקס נדרשים מזהה לקוח וסוד OAuth בזמן קומפילציה. הרצה או בנייה עם:\nflutter run -d linux --dart-define-from-file=flutter_app/.env\nflutter build linux --dart-define-from-file=flutter_app/.env\nהעתק את flutter_app/.env.example ל-flutter_app/.env ומלא LINUX_GOOGLE_OAUTH_CLIENT_ID ו-LINUX_GOOGLE_OAUTH_CLIENT_SECRET. לעולם אל תעלה את קובץ .env.",
+  "linuxOAuthRedirectPortInUse": "לא ניתן להתחיל התחברות בפורט {port}. סגור חלון LecCheck נוסף או שחרר את הפורט ונסה שוב.",
+  "@linuxOAuthRedirectPortInUse": {
+    "placeholders": {
+      "port": {"type": "int"}
+    }
+  },
+  "linuxOAuthTimedOut": "פג הזמן להתחברות Google. סגור את לשונית הדפדפן אם היא נתקעה ונסה שוב.",
+  "semesterFinishLineHint": "יום אחרון של הסמסטר"
 }

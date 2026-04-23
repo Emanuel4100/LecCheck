@@ -803,4 +803,43 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get devRebootstrap => 'אתחול מחדש';
+
+  @override
+  String get removeOneOffSession => 'הסרת מפגש חד-פעמי';
+
+  @override
+  String get removeOneOffSessionConfirm =>
+      'להסיר את המפגש החד-פעמי מהקורס? המקום ייעלם מהלוח.';
+
+  @override
+  String get rescheduleOneOffSession => 'שינוי תאריך ושעה';
+
+  @override
+  String get rescheduleOneOffDialogTitle => 'תזמון מחדש למפגש חד-פעמי';
+
+  @override
+  String get rescheduleOneOffApply => 'החלה';
+
+  @override
+  String get oneOffOutsideSemesterWarning =>
+      'התאריך מחוץ לסמסטר הנוכחי. הארך את תאריכי הסמסטר או בחר יום בתוך התקופה.';
+
+  @override
+  String get linuxOAuthMissingClientTitle => 'התחברות Google לא הוגדרה';
+
+  @override
+  String get linuxOAuthMissingClientBody =>
+      'בלינוקס נדרשים מזהה לקוח וסוד OAuth בזמן קומפילציה. הרצה או בנייה עם:\nflutter run -d linux --dart-define-from-file=flutter_app/.env\nflutter build linux --dart-define-from-file=flutter_app/.env\nהעתק את flutter_app/.env.example ל-flutter_app/.env ומלא LINUX_GOOGLE_OAUTH_CLIENT_ID ו-LINUX_GOOGLE_OAUTH_CLIENT_SECRET. לעולם אל תעלה את קובץ .env.';
+
+  @override
+  String linuxOAuthRedirectPortInUse(int port) {
+    return 'לא ניתן להתחיל התחברות בפורט $port. סגור חלון LecCheck נוסף או שחרר את הפורט ונסה שוב.';
+  }
+
+  @override
+  String get linuxOAuthTimedOut =>
+      'פג הזמן להתחברות Google. סגור את לשונית הדפדפן אם היא נתקעה ונסה שוב.';
+
+  @override
+  String get semesterFinishLineHint => 'יום אחרון של הסמסטר';
 }

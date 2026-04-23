@@ -1609,6 +1609,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Force re-bootstrap'**
   String get devRebootstrap;
+
+  /// No description provided for @removeOneOffSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove one-time session'**
+  String get removeOneOffSession;
+
+  /// No description provided for @removeOneOffSessionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this one-time meeting from the course? Its slot will disappear from the schedule.'**
+  String get removeOneOffSessionConfirm;
+
+  /// No description provided for @rescheduleOneOffSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Change date & time'**
+  String get rescheduleOneOffSession;
+
+  /// No description provided for @rescheduleOneOffDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule one-time session'**
+  String get rescheduleOneOffDialogTitle;
+
+  /// No description provided for @rescheduleOneOffApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get rescheduleOneOffApply;
+
+  /// No description provided for @oneOffOutsideSemesterWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'That date is outside the current semester. Extend semester dates or pick a day within the term.'**
+  String get oneOffOutsideSemesterWarning;
+
+  /// No description provided for @linuxOAuthMissingClientTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in not configured'**
+  String get linuxOAuthMissingClientTitle;
+
+  /// No description provided for @linuxOAuthMissingClientBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Linux builds need OAuth client ID and secret at compile time. Run or build with:\nflutter run -d linux --dart-define-from-file=flutter_app/.env\nflutter build linux --dart-define-from-file=flutter_app/.env\nCopy flutter_app/.env.example to flutter_app/.env and fill LINUX_GOOGLE_OAUTH_CLIENT_ID and LINUX_GOOGLE_OAUTH_CLIENT_SECRET. Never commit .env.'**
+  String get linuxOAuthMissingClientBody;
+
+  /// No description provided for @linuxOAuthRedirectPortInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start sign-in on port {port}. Close another LecCheck window or free that port, then try again.'**
+  String linuxOAuthRedirectPortInUse(int port);
+
+  /// No description provided for @linuxOAuthTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in timed out. Close the browser tab if it is stuck, then try again.'**
+  String get linuxOAuthTimedOut;
+
+  /// No description provided for @semesterFinishLineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Last day of the semester'**
+  String get semesterFinishLineHint;
 }
 
 class _AppLocalizationsDelegate

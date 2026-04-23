@@ -5,11 +5,18 @@ String _lecturePreserveKey(DateTime date, String start, String end) =>
 
 /// Rebuilds [course.lectures] from [course.meetings] and semester bounds.
 /// Preserves status, recording link, and notes when date/start/end match.
+/// For one-off meetings, also preserves by [Lecture.meetingId] so moving the
+/// slot does not drop notes or recording.
 void rebuildLecturesForCourse(Course course, SemesterSchedule schedule) {
   final preserved = <String, (LectureStatus, String?, String)>{};
+  final preservedByMeetingId = <String, (LectureStatus, String?, String)>{};
   for (final l in course.lectures) {
     preserved[_lecturePreserveKey(l.date, l.start, l.end)] =
         (l.status, l.recordingLink, l.notes);
+    final mid = l.meetingId;
+    if (mid != null && mid.isNotEmpty) {
+      preservedByMeetingId[mid] = (l.status, l.recordingLink, l.notes);
+    }
   }
 
   course.lectures.clear();
@@ -19,7 +26,7 @@ void rebuildLecturesForCourse(Course course, SemesterSchedule schedule) {
       if (!date.isBefore(schedule.startDate) &&
           !date.isAfter(schedule.endDate)) {
         final k = _lecturePreserveKey(date, meeting.start, meeting.end);
-        final p = preserved[k];
+        final p = preserved[k] ?? preservedByMeetingId[meeting.id];
         course.lectures.add(
           Lecture(
             courseId: course.id,

@@ -809,4 +809,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devRebootstrap => 'Force re-bootstrap';
+
+  @override
+  String get removeOneOffSession => 'Remove one-time session';
+
+  @override
+  String get removeOneOffSessionConfirm =>
+      'Remove this one-time meeting from the course? Its slot will disappear from the schedule.';
+
+  @override
+  String get rescheduleOneOffSession => 'Change date & time';
+
+  @override
+  String get rescheduleOneOffDialogTitle => 'Reschedule one-time session';
+
+  @override
+  String get rescheduleOneOffApply => 'Apply';
+
+  @override
+  String get oneOffOutsideSemesterWarning =>
+      'That date is outside the current semester. Extend semester dates or pick a day within the term.';
+
+  @override
+  String get linuxOAuthMissingClientTitle => 'Google sign-in not configured';
+
+  @override
+  String get linuxOAuthMissingClientBody =>
+      'Linux builds need OAuth client ID and secret at compile time. Run or build with:\nflutter run -d linux --dart-define-from-file=flutter_app/.env\nflutter build linux --dart-define-from-file=flutter_app/.env\nCopy flutter_app/.env.example to flutter_app/.env and fill LINUX_GOOGLE_OAUTH_CLIENT_ID and LINUX_GOOGLE_OAUTH_CLIENT_SECRET. Never commit .env.';
+
+  @override
+  String linuxOAuthRedirectPortInUse(int port) {
+    return 'Could not start sign-in on port $port. Close another LecCheck window or free that port, then try again.';
+  }
+
+  @override
+  String get linuxOAuthTimedOut =>
+      'Google sign-in timed out. Close the browser tab if it is stuck, then try again.';
+
+  @override
+  String get semesterFinishLineHint => 'Last day of the semester';
 }

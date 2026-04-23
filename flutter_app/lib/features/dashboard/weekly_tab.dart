@@ -4,7 +4,6 @@ import '../../core/platform/adaptive.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/schedule_models.dart';
 import 'dashboard_utils.dart';
-import 'lecture_detail_sheet.dart';
 
 class WeeklyTab extends StatefulWidget {
   const WeeklyTab({
@@ -15,6 +14,7 @@ class WeeklyTab extends StatefulWidget {
     required this.weekSyncToken,
     required this.onStatus,
     required this.onMeetingLinksSaved,
+    required this.onLectureDetail,
     required this.onMarkNoClassDay,
     required this.onClearNoClassDay,
     required this.l10n,
@@ -28,6 +28,8 @@ class WeeklyTab extends StatefulWidget {
   final void Function(Lecture, LectureStatus) onStatus;
   final void Function(Course course, Meeting meeting, List<NamedLink> links)
       onMeetingLinksSaved;
+  final Future<void> Function(BuildContext context, Lecture lecture)
+      onLectureDetail;
   /// Add [date] (date-only) to no-class set and cancel all lectures that day.
   final void Function(DateTime date) onMarkNoClassDay;
   /// Remove [date] from no-class set and reset lectures that day to pending.
@@ -233,7 +235,7 @@ class _WeeklyTabState extends State<WeeklyTab>
                     final items = rawItems
                         .where((l) => !l.date.isAfter(endD))
                         .toList();
-                    return SizedBox(
+                    Widget weekColumn = SizedBox(
                       width: cellWidth,
                       child: Column(
                         children: [
@@ -282,6 +284,18 @@ class _WeeklyTabState extends State<WeeklyTab>
                                                 size: compactTile ? 11 : 13,
                                               ),
                                             ),
+                                          if (isSemesterEndDay && !afterSem)
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsetsDirectional
+                                                      .only(end: 2),
+                                              child: Icon(
+                                                Icons.flag_outlined,
+                                                size: compactTile ? 11 : 13,
+                                                semanticLabel: widget
+                                                    .l10n.semesterFinishLineHint,
+                                              ),
+                                            ),
                                           Flexible(
                                             child: Text(
                                               afterSem
@@ -304,7 +318,7 @@ class _WeeklyTabState extends State<WeeklyTab>
                                   if (isSemesterEndDay && !afterSem) {
                                     inner = Tooltip(
                                       message:
-                                          widget.l10n.semesterEndsThisDay,
+                                          '${widget.l10n.semesterEndsThisDay} — ${widget.l10n.semesterFinishLineHint}',
                                       child: inner,
                                     );
                                   }
@@ -462,6 +476,35 @@ class _WeeklyTabState extends State<WeeklyTab>
                         ],
                       ),
                     );
+                    if (isSemesterEndDay && !afterSem) {
+                      final cs = Theme.of(context).colorScheme;
+                      weekColumn = DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              cs.tertiary.withValues(alpha: 0.2),
+                              cs.tertiaryContainer.withValues(alpha: 0.08),
+                              Colors.transparent,
+                            ],
+                            stops: const [0.0, 0.28, 1.0],
+                          ),
+                          border: Border(
+                            left: BorderSide(
+                              color: cs.tertiary.withValues(alpha: 0.5),
+                              width: 2,
+                            ),
+                            right: BorderSide(
+                              color: cs.tertiary.withValues(alpha: 0.5),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        child: weekColumn,
+                      );
+                    }
+                    return weekColumn;
                   }),
                 ],
               ),
@@ -474,15 +517,7 @@ class _WeeklyTabState extends State<WeeklyTab>
   }
 
   Future<void> _onGridTap(BuildContext context, Lecture lecture) async {
-    await showLectureDetailEditor(
-      context,
-      schedule: widget.schedule,
-      lecture: lecture,
-      allLectures: widget.allLectures,
-      l10n: widget.l10n,
-      onStatus: widget.onStatus,
-      onMeetingLinksSaved: widget.onMeetingLinksSaved,
-    );
+    await widget.onLectureDetail(context, lecture);
     if (mounted) setState(() {});
   }
 
@@ -491,59 +526,62 @@ class _WeeklyTabState extends State<WeeklyTab>
     final marked = widget.schedule.noClassDateKeys.contains(key);
     final l10n = widget.l10n;
     final useDialog = Adaptive.isDesktop(context) || Adaptive.isWebLike(context);
-    final pick = useDialog
-        ? await showDialog<String>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.dayOptionsTitle),
-              content: Text(
-                formatLectureDateMedium(columnDate, l10n),
-                style: Theme.of(ctx).textTheme.titleSmall,
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.cancel),
-                ),
-                if (marked)
-                  FilledButton.tonal(
-                    onPressed: () => Navigator.pop(ctx, 'clear'),
-                    child: Text(l10n.clearNoClassDay),
-                  ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, 'mark'),
-                  child: Text(l10n.markNoClassDay),
-                ),
-              ],
+    final String? pick;
+    if (useDialog) {
+      pick = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.dayOptionsTitle),
+          content: Text(
+            formatLectureDateMedium(columnDate, l10n),
+            style: Theme.of(ctx).textTheme.titleSmall,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
             ),
-          )
-        : await showModalBottomSheet<String>(
-            context: context,
-            builder: (ctx) => SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ListTile(
-                    title: Text(l10n.dayOptionsTitle),
-                    subtitle: Text(formatLectureDateMedium(columnDate, l10n)),
-                  ),
-                  if (marked)
-                    ListTile(
-                      leading: const Icon(Icons.event_available_outlined),
-                      title: Text(l10n.clearNoClassDay),
-                      onTap: () => Navigator.pop(ctx, 'clear'),
-                    ),
-                  ListTile(
-                    leading: const Icon(Icons.event_busy),
-                    title: Text(l10n.markNoClassDay),
-                    subtitle: Text(l10n.markNoClassDaySubtitle),
-                    onTap: () => Navigator.pop(ctx, 'mark'),
-                  ),
-                ],
+            if (marked)
+              FilledButton.tonal(
+                onPressed: () => Navigator.pop(ctx, 'clear'),
+                child: Text(l10n.clearNoClassDay),
               ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'mark'),
+              child: Text(l10n.markNoClassDay),
             ),
-          );
+          ],
+        ),
+      );
+    } else {
+      pick = await showModalBottomSheet<String>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ListTile(
+                title: Text(l10n.dayOptionsTitle),
+                subtitle: Text(formatLectureDateMedium(columnDate, l10n)),
+              ),
+              if (marked)
+                ListTile(
+                  leading: const Icon(Icons.event_available_outlined),
+                  title: Text(l10n.clearNoClassDay),
+                  onTap: () => Navigator.pop(ctx, 'clear'),
+                ),
+              ListTile(
+                leading: const Icon(Icons.event_busy),
+                title: Text(l10n.markNoClassDay),
+                subtitle: Text(l10n.markNoClassDaySubtitle),
+                onTap: () => Navigator.pop(ctx, 'mark'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (!context.mounted) return;
     if (pick == 'mark') {
       widget.onMarkNoClassDay(columnDate);

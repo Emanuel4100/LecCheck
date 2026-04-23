@@ -8,6 +8,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../firebase_options.dart';
 import 'google_oauth_linux.dart';
 
+/// Thrown before opening the browser when Linux OAuth defines are missing.
+class LinuxOAuthNotConfigured implements Exception {
+  const LinuxOAuthNotConfigured();
+}
+
 /// Google Play Services [ApiException] code 10 = DEVELOPER_ERROR (SHA-1 / OAuth client mismatch).
 bool isGoogleSignInAndroidDeveloperError(Object error) {
   final s = error.toString();
@@ -65,6 +70,9 @@ GoogleSignIn get _googleSignIn =>
 /// (or on Linux where REST-based auth stores credentials via [LinuxAuthSession]).
 Future<UserCredential?> signInWithGoogle() async {
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
+    if (!linuxGoogleOAuthDesktopCredentialsConfigured) {
+      throw const LinuxOAuthNotConfigured();
+    }
     await signInWithGoogleLinuxDesktop();
     return null;
   }
